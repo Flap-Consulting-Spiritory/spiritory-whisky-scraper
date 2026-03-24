@@ -1,0 +1,27 @@
+# Secrets & sessions
+.env
+wb_session.json
+
+# Runtime state (auto-generated)
+scraper_state.json
+sim_db.json
+mock_db.json
+_sim_snapshot.json
+live_scrape_results.json
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# IDE & tool caches
+.vscode/
+.pyre_configuration
+.ruff_cache/
+.pytest_cache/
+.claude/
