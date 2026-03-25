@@ -132,7 +132,7 @@ def run_scraper(
             has_tasting_1 = bottle.get('tasting_note_1') is not None
             has_tasting_2 = bottle.get('tasting_note_2') is not None
 
-            if has_description and has_tasting_1:
+            if has_description and has_tasting_1 and has_tasting_2:
                 emit("info", "skip", "  -> Already complete (description + tasting notes). Skipping.",
                      bottle_id=b_id, bottle_name=b_name)
                 _logger.log(b_id, wb_id, b_name, "[already had data]", "[already had data]", "[already had data]")
@@ -276,7 +276,7 @@ def run_scraper(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Spiritoni Whisky Scraper — full backfill mode")
+    parser = argparse.ArgumentParser(description="Spiritory Whisky Scraper — full backfill mode")
     parser.add_argument("--batch", type=int, default=100, help="Number of bottles to process per run")
     parser.add_argument("--reset-checkpoint", action="store_true", help="Clear the checkpoint before running")
     args = parser.parse_args()

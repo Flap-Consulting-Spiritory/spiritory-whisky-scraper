@@ -1,8 +1,8 @@
-# Spiritoni Whisky Scraper
+# Spiritory Whisky Scraper
 
 ## Project Overview
 
-The **Spiritoni Whisky Scraper** is a Python-based data enrichment engine for whisky bottle records stored in a Strapi CMS backend. For each bottle with a WhiskyBase ID (`wbId`), the engine scrapes reviews and tasting tags from **WhiskyBase**, generates multilingual marketing descriptions via **Venice AI** (OpenAI-compatible), and writes the results back to Strapi.
+The **Spiritory Whisky Scraper** is a Python-based data enrichment engine for whisky bottle records stored in a Strapi CMS backend. For each bottle with a WhiskyBase ID (`wbId`), the engine scrapes reviews and tasting tags from **WhiskyBase**, generates multilingual marketing descriptions via **Venice AI** (OpenAI-compatible), and writes the results back to Strapi.
 
 ### What it does per bottle
 1. Fetches bottles from Strapi that have a `wbId` but are missing `description` or `tasting_note_1`

@@ -1,5 +1,5 @@
 """
-cron_daily.py — Daily cron daemon for Spiritoni Whisky Scraper.
+cron_daily.py — Daily cron daemon for Spiritory Whisky Scraper.
 
 Runs as a long-lived background process. At the configured UTC time each day
 (default: 00:00), fetches all bottles published in the last 24 hours, runs the
@@ -117,7 +117,7 @@ def run_cron_cycle(batch_size: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Daily cron daemon for Spiritoni Whisky Scraper"
+        description="Daily cron daemon for Spiritory Whisky Scraper"
     )
     parser.add_argument(
         "--hour",

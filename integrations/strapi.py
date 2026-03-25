@@ -29,7 +29,10 @@ def fetch_bottles(
 
     while True:
         after_filter = f"&filters[id][$gt]={after_id}" if after_id else ""
-        date_filter = f"&filters[publishedAt][$gte]={published_since.isoformat()}" if published_since else ""
+        date_filter = (
+            f"&filters[publishedAt][$gte]={published_since.strftime('%Y-%m-%dT%H:%M:%S.000Z')}"
+            if published_since else ""
+        )
         url = (
             f"{STRAPI_BASE_URL}/skus"
             f"?filters[wbId][$notNull]=true"
