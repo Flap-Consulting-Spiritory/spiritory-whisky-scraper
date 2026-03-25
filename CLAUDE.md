@@ -14,7 +14,7 @@ The **Spiritory Whisky Scraper** is a Python-based data enrichment engine for wh
 ### Key Features
 - **Two run modes:** Full backfill (`scraper_engine.py`) and daily cron daemon (`cron_daily.py`)
 - **Stateful / Resumable:** `scraper_engine.py` uses `scraper_state.json` to track the last processed bottle ID
-- **Anti-Bot Resilience:** Random jitter delays, Playwright + playwright-stealth, cookie-based session, tenacity retry logic
+- **Anti-Bot Resilience:** Random jitter delays, Playwright + `playwright-stealth` — no login or session cookies required
 - **No hallucinations:** Venice AI is only called when WhiskyBase returned actual review text
 
 ---
@@ -25,7 +25,6 @@ The **Spiritory Whisky Scraper** is a Python-based data enrichment engine for wh
 scraper_engine.py         Full backfill — processes all Strapi bottles missing data (run once)
 cron_daily.py             Daily daemon — processes bottles published in the last 24h (runs continuously)
 checkpoint_manager.py     Read/write scraper_state.json (used by scraper_engine only)
-save_wb_session.py        One-time login tool to save WhiskyBase cookies
 requirements.txt          Python dependencies
 
 integrations/
@@ -40,7 +39,6 @@ utils/
   jitter.py               random_delay() for humanized request timing
 
 logs/                     CSV reports from each run (auto-generated, gitignored)
-wb_session.json           WhiskyBase session cookies (do not commit)
 scraper_state.json        Checkpoint state file (auto-generated, do not commit)
 ```
 
@@ -59,19 +57,15 @@ pip install -r requirements.txt
 
 # 3. Install Playwright browser (required for WhiskyBase scraping)
 playwright install chromium
-
-# 4. Save WhiskyBase session (one-time, renew when cookies expire ~7-30 days)
-python save_wb_session.py
-# A real Chrome window opens — log in manually, then press Enter
 ```
+
+> **No WhiskyBase login required.** `playwright-stealth` patches Chromium's browser fingerprint to bypass Cloudflare, and WhiskyBase serves review content without authentication — confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login: all are empty. No session file is needed.
 
 ### Environment Variables (`.env`)
 ```
 STRAPI_BASE_URL=https://strapi.spiritory.com/api
 STRAPI_API_KEY=<your Strapi bearer token>
 VENICE_ADMIN_KEY=<Venice AI API key>
-WHISKYBASE_USERNAME=<username>
-WHISKYBASE_PASSWORD=<password>
 
 # Optional — override cron trigger time (default: midnight UTC)
 CRON_HOUR=0
@@ -135,21 +129,18 @@ rm scraper_state.json
 
 ---
 
-## WhiskyBase Session
+## WhiskyBase Access — No Login Required
 
-WhiskyBase requires login to see unblurred reviews. The session is saved to `wb_session.json` as browser cookies and loaded automatically on each run.
+**WhiskyBase does not require authentication to read reviews.**
 
-**Signs the session has expired:**
-```
-[WhiskyBase] ⚠️  Session expired — reviews will be blurred.
-```
+After exhaustive investigation (multiple nodriver/CDP approaches, browser cookie inspection via Cookie-Editor, and manual `localStorage`/`sessionStorage` checks), it was confirmed that:
+- WhiskyBase sets **zero cookies** after login
+- `localStorage` and `sessionStorage` are both empty (`{}`)
+- Review content is served to any request that passes Cloudflare's bot check
 
-To renew:
-```bash
-python save_wb_session.py
-```
+`playwright-stealth` handles the Cloudflare bypass by patching Chromium's browser fingerprint (WebGL, navigator properties, etc.). No credentials, session file, or `save_wb_session.py` script is needed. The `wb_session.json` file and `WHISKYBASE_USERNAME`/`WHISKYBASE_PASSWORD` env vars have been removed.
 
-Session validity is typically 7–30 days.
+> **History:** `save_wb_session.py` was originally written using **nodriver** to collect cookies via CDP (`network.get_cookies`). Chrome 130+ introduced a `CookiePartitionKey` parsing bug that causes all CDP cookie retrieval methods to hang indefinitely. After exhausting every CDP approach (`storage.get_cookies`, `network.get_all_cookies`, explicit-URL variants, response header interception), we discovered via Cookie-Editor that WhiskyBase simply has no cookies to collect — making the entire session-saving approach unnecessary.
 
 ---
 
@@ -182,9 +173,6 @@ python cron_daily.py --hour 0 --minute 0
 # 5. Confirm imports are clean
 python -c "from scraper_engine import run_scraper; print('OK')"
 python -c "from cron_daily import run_cron_cycle; print('OK')"
-
-# 6. Renew WhiskyBase session if needed
-python save_wb_session.py
 ```
 
 ---

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spiritory Scraper — Guía de Configuración</title>
+  <title>Spiritory Scraper — Setup Guide</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -362,8 +362,8 @@
           <div class="logo-sub">Production Setup Guide</div>
         </div>
       </div>
-      <h1>Guía de Configuración<br/>& Producción</h1>
-      <p class="subtitle">Configura el scraper desde cero — desde el <code>.env</code> hasta el cron corriendo en background</p>
+      <h1>Setup &amp; Production<br/>Guide</h1>
+      <p class="subtitle">Configure the scraper from scratch — from <code>.env</code> to the cron running in the background</p>
     </div>
 
     <!-- OS Selector -->
@@ -379,7 +379,7 @@
     <!-- ═══════════════ WINDOWS ═══════════════ -->
     <div class="tab-content active" id="tab-windows">
 
-      <div class="section-title">Paso a paso — Windows</div>
+      <div class="section-title">Step by step — Windows</div>
 
       <div class="steps">
 
@@ -388,21 +388,21 @@
           <div class="step-header">
             <div class="step-number">1</div>
             <div class="step-info">
-              <div class="step-title">Requisitos previos</div>
-              <div class="step-desc">Instala Python 3.12+ y Git si no los tienes</div>
+              <div class="step-title">Prerequisites</div>
+              <div class="step-desc">Install Python 3.12+ and Git if you don't have them</div>
             </div>
           </div>
           <div class="step-body">
             <div class="alert alert-info">
               <span class="alert-icon">ℹ️</span>
-              Descarga Python desde <strong>python.org/downloads</strong> — marca la opción <strong>"Add Python to PATH"</strong> durante la instalación.
+              Download Python from <strong>python.org/downloads</strong> — check <strong>"Add Python to PATH"</strong> during installation.
             </div>
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD / PowerShell</div>
-              <pre><span class="cm"># Verificar versiones</span>
+              <pre><span class="cm"># Verify versions</span>
 python --version
 git --version</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -412,27 +412,27 @@ git --version</pre>
           <div class="step-header">
             <div class="step-number">2</div>
             <div class="step-info">
-              <div class="step-title">Clonar el repositorio y crear entorno virtual</div>
-              <div class="step-desc">Clona el proyecto y activa el entorno Python aislado</div>
+              <div class="step-title">Clone the repository and create a virtual environment</div>
+              <div class="step-desc">Clone the project and activate the isolated Python environment</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD</div>
-              <pre><span class="cm"># Clonar repositorio (ajusta la URL a la tuya)</span>
+              <pre><span class="cm"># Clone repository (adjust the URL to yours)</span>
 git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
 cd spiritoni-whisky-scraper
 
-<span class="cm"># Crear y activar entorno virtual</span>
+<span class="cm"># Create and activate virtual environment</span>
 python -m venv venv
 venv\Scripts\activate
 
-<span class="cm"># Instalar dependencias</span>
+<span class="cm"># Install dependencies</span>
 pip install -r requirements.txt
 
-<span class="cm"># Instalar Chromium para Playwright</span>
+<span class="cm"># Install Chromium for Playwright</span>
 playwright install chromium</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -442,8 +442,8 @@ playwright install chromium</pre>
           <div class="step-header">
             <div class="step-number">3</div>
             <div class="step-info">
-              <div class="step-title">Crear y configurar el archivo <code>.env</code></div>
-              <div class="step-desc">Copia el ejemplo y completa tus credenciales</div>
+              <div class="step-title">Create and configure the <code>.env</code> file</div>
+              <div class="step-desc">Copy the example and fill in your credentials</div>
             </div>
           </div>
           <div class="step-body">
@@ -451,67 +451,58 @@ playwright install chromium</pre>
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD</div>
               <pre>copy .env.example .env
 notepad .env</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> Contenido de .env</div>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> .env contents</div>
               <pre><span class="nm">STRAPI_BASE_URL</span>=https://strapi.spiritory.com/api
-<span class="nm">STRAPI_API_KEY</span>=tu_api_key_de_strapi
+<span class="nm">STRAPI_API_KEY</span>=your_strapi_api_key
 
-<span class="nm">VENICE_ADMIN_KEY</span>=tu_api_key_de_venice
+<span class="nm">VENICE_ADMIN_KEY</span>=your_venice_api_key
 
-<span class="nm">WHISKYBASE_USERNAME</span>=tu_usuario_de_whiskybase
-<span class="nm">WHISKYBASE_PASSWORD</span>=tu_password_de_whiskybase
-
-<span class="cm"># Opcional — hora UTC en que corre el cron (default: medianoche)</span>
+<span class="cm"># Optional — UTC time when the cron runs (default: midnight)</span>
 <span class="nm">CRON_HOUR</span>=0
 <span class="nm">CRON_MINUTE</span>=0</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="alert alert-info">
+              <span class="alert-icon">ℹ️</span>
+              No WhiskyBase credentials needed. <code>playwright-stealth</code> bypasses Cloudflare automatically and WhiskyBase serves review content without authentication.
             </div>
             <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;">
               <table class="env-table">
                 <thead>
                   <tr>
                     <th>Variable</th>
-                    <th>Descripción</th>
-                    <th>Tipo</th>
+                    <th>Description</th>
+                    <th>Type</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td class="env-key">STRAPI_BASE_URL</td>
-                    <td class="env-desc">URL base de tu API de Strapi</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Base URL of your Strapi API</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">STRAPI_API_KEY</td>
-                    <td class="env-desc">Token Bearer de Strapi (Settings → API Tokens)</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Strapi Bearer token (Settings → API Tokens)</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">VENICE_ADMIN_KEY</td>
-                    <td class="env-desc">API Key de Venice AI para generar descripciones</td>
-                    <td><span class="env-req required">Requerido</span></td>
-                  </tr>
-                  <tr>
-                    <td class="env-key">WHISKYBASE_USERNAME</td>
-                    <td class="env-desc">Usuario de tu cuenta WhiskyBase</td>
-                    <td><span class="env-req required">Requerido</span></td>
-                  </tr>
-                  <tr>
-                    <td class="env-key">WHISKYBASE_PASSWORD</td>
-                    <td class="env-desc">Contraseña de tu cuenta WhiskyBase</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Venice AI API key for generating descriptions</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">CRON_HOUR</td>
-                    <td class="env-desc">Hora UTC de ejecución diaria (0–23)</td>
-                    <td><span class="env-req optional">Opcional</span></td>
+                    <td class="env-desc">UTC hour for daily run (0–23)</td>
+                    <td><span class="env-req optional">Optional</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">CRON_MINUTE</td>
-                    <td class="env-desc">Minuto de ejecución diaria (0–59)</td>
-                    <td><span class="env-req optional">Opcional</span></td>
+                    <td class="env-desc">Minute for daily run (0–59)</td>
+                    <td><span class="env-req optional">Optional</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -524,22 +515,23 @@ notepad .env</pre>
           <div class="step-header">
             <div class="step-number">4</div>
             <div class="step-info">
-              <div class="step-title">Guardar sesión de WhiskyBase</div>
-              <div class="step-desc">Abre Chrome, inicia sesión manualmente y guarda las cookies. Renueva cada 7–30 días.</div>
+              <div class="step-title">Verify everything works</div>
+              <div class="step-desc">Quick tests before going to production</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD</div>
-              <pre><span class="cm"># Asegúrate de que el venv está activado</span>
-venv\Scripts\activate
+              <pre><span class="cm"># Test 1: Strapi connectivity</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} bottles')"
 
-python save_wb_session.py</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-            </div>
-            <div class="alert alert-warning">
-              <span class="alert-icon">⚠️</span>
-              Se abrirá una ventana de Chrome real. Inicia sesión en WhiskyBase, luego vuelve a la terminal y presiona <strong>Enter</strong>. Las cookies se guardan en <code>wb_session.json</code>.
+<span class="cm"># Test 2: Venice AI</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
+
+<span class="cm"># Test 3: Clean imports</span>
+python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
+python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -549,79 +541,53 @@ python save_wb_session.py</pre>
           <div class="step-header">
             <div class="step-number">5</div>
             <div class="step-info">
-              <div class="step-title">Verificar que todo funciona</div>
-              <div class="step-desc">Tests rápidos antes de ir a producción</div>
-            </div>
-          </div>
-          <div class="step-body">
-            <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD</div>
-              <pre><span class="cm"># Test 1: Conectividad con Strapi</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} botellas')"
-
-<span class="cm"># Test 2: Venice AI</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
-
-<span class="cm"># Test 3: Imports limpios</span>
-python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
-python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- STEP 6 -->
-        <div class="step">
-          <div class="step-header">
-            <div class="step-number">6</div>
-            <div class="step-info">
-              <div class="step-title">Correr el cron en background (producción)</div>
-              <div class="step-desc">En Windows se usa <code>start /B</code> o una tarea programada de PowerShell</div>
+              <div class="step-title">Run the cron in the background (production)</div>
+              <div class="step-desc">On Windows use <code>start /B</code> or a PowerShell scheduled task</div>
             </div>
           </div>
           <div class="step-body">
             <div class="alert alert-info">
               <span class="alert-icon">💡</span>
-              En Windows no existe <code>nohup</code>. Usa <code>start /B</code> para correrlo desatachado, o créalo como Tarea Programada del sistema.
+              On Windows there is no <code>nohup</code>. Use <code>start /B</code> to detach, or create it as a Windows Scheduled Task.
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — background inmediato</div>
-              <pre><span class="cm"># Corre en background y redirige output a logs\cron.log</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — background</div>
+              <pre><span class="cm"># Run in background, redirect output to logs\cron.log</span>
 start /B python cron_daily.py > logs\cron.log 2>&1</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> PowerShell — background con Start-Process</div>
-              <pre><span class="cm"># Opción recomendada — ventana propia y log separado</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> PowerShell — background with Start-Process</div>
+              <pre><span class="cm"># Recommended option — separate window and log file</span>
 Start-Process python -ArgumentList "cron_daily.py" `
   -RedirectStandardOutput "logs\cron.log" `
   -RedirectStandardError "logs\cron_err.log" `
   -WindowStyle Hidden</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — test inmediato (dispara ahora)</div>
-              <pre><span class="cm"># Útil para verificar que procesa correctamente</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — immediate test (fires now)</div>
+              <pre><span class="cm"># Useful to verify correct processing</span>
 python cron_daily.py --run-now</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — ver el log en vivo</div>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD — watch live log</div>
               <pre>powershell -Command "Get-Content logs\cron.log -Wait -Tail 30"</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> PowerShell — detener el cron</div>
-              <pre><span class="cm"># Buscar el PID del proceso</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> PowerShell — stop the cron</div>
+              <pre><span class="cm"># Find the process PID</span>
 Get-Process python
 
-<span class="cm"># Detener por PID (reemplaza 1234 con el PID real)</span>
+<span class="cm"># Stop by PID (replace 1234 with the real PID)</span>
 Stop-Process -Id 1234</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="alert alert-success">
               <span class="alert-icon">✅</span>
-              El cron corre una vez al día a medianoche UTC. Cambia la hora con <code>--hour 6 --minute 30</code> o via las variables <code>CRON_HOUR</code> / <code>CRON_MINUTE</code> en el <code>.env</code>.
+              The cron runs once a day at midnight UTC. Change the time with <code>--hour 6 --minute 30</code> or via <code>CRON_HOUR</code> / <code>CRON_MINUTE</code> in the <code>.env</code>.
             </div>
           </div>
         </div>
@@ -632,7 +598,7 @@ Stop-Process -Id 1234</pre>
     <!-- ═══════════════ MAC / LINUX ═══════════════ -->
     <div class="tab-content" id="tab-unix">
 
-      <div class="section-title">Paso a paso — Mac / Linux</div>
+      <div class="section-title">Step by step — Mac / Linux</div>
 
       <div class="steps">
 
@@ -641,26 +607,26 @@ Stop-Process -Id 1234</pre>
           <div class="step-header">
             <div class="step-number">1</div>
             <div class="step-info">
-              <div class="step-title">Requisitos previos</div>
-              <div class="step-desc">Python 3.12+ y Git — instala con brew (Mac) o apt (Linux)</div>
+              <div class="step-title">Prerequisites</div>
+              <div class="step-desc">Python 3.12+ and Git — install with brew (Mac) or apt (Linux)</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> macOS (Homebrew)</div>
               <pre>brew install python@3.12 git</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> Ubuntu / Debian</div>
               <pre>sudo apt update && sudo apt install python3.12 python3.12-venv git -y</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> Verificar</div>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> Verify</div>
               <pre>python3 --version
 git --version</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -670,27 +636,27 @@ git --version</pre>
           <div class="step-header">
             <div class="step-number">2</div>
             <div class="step-info">
-              <div class="step-title">Clonar el repositorio y crear entorno virtual</div>
-              <div class="step-desc">Clona el proyecto y activa el entorno Python aislado</div>
+              <div class="step-title">Clone the repository and create a virtual environment</div>
+              <div class="step-desc">Clone the project and activate the isolated Python environment</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash</div>
-              <pre><span class="cm"># Clonar repositorio (ajusta la URL a la tuya)</span>
+              <pre><span class="cm"># Clone repository (adjust the URL to yours)</span>
 git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
 cd spiritoni-whisky-scraper
 
-<span class="cm"># Crear y activar entorno virtual</span>
+<span class="cm"># Create and activate virtual environment</span>
 python3 -m venv venv
 source venv/bin/activate
 
-<span class="cm"># Instalar dependencias</span>
+<span class="cm"># Install dependencies</span>
 pip install -r requirements.txt
 
-<span class="cm"># Instalar Chromium para Playwright</span>
+<span class="cm"># Install Chromium for Playwright</span>
 playwright install chromium</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -700,76 +666,67 @@ playwright install chromium</pre>
           <div class="step-header">
             <div class="step-number">3</div>
             <div class="step-info">
-              <div class="step-title">Crear y configurar el archivo <code>.env</code></div>
-              <div class="step-desc">Copia el ejemplo y completa tus credenciales</div>
+              <div class="step-title">Create and configure the <code>.env</code> file</div>
+              <div class="step-desc">Copy the example and fill in your credentials</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash</div>
               <pre>cp .env.example .env
-nano .env        <span class="cm"># o: vim .env  /  code .env</span></pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+nano .env        <span class="cm"># or: vim .env  /  code .env</span></pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> Contenido de .env</div>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> .env contents</div>
               <pre><span class="nm">STRAPI_BASE_URL</span>=https://strapi.spiritory.com/api
-<span class="nm">STRAPI_API_KEY</span>=tu_api_key_de_strapi
+<span class="nm">STRAPI_API_KEY</span>=your_strapi_api_key
 
-<span class="nm">VENICE_ADMIN_KEY</span>=tu_api_key_de_venice
+<span class="nm">VENICE_ADMIN_KEY</span>=your_venice_api_key
 
-<span class="nm">WHISKYBASE_USERNAME</span>=tu_usuario_de_whiskybase
-<span class="nm">WHISKYBASE_PASSWORD</span>=tu_password_de_whiskybase
-
-<span class="cm"># Opcional — hora UTC en que corre el cron (default: medianoche)</span>
+<span class="cm"># Optional — UTC time when the cron runs (default: midnight)</span>
 <span class="nm">CRON_HOUR</span>=0
 <span class="nm">CRON_MINUTE</span>=0</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+            <div class="alert alert-info">
+              <span class="alert-icon">ℹ️</span>
+              No WhiskyBase credentials needed. <code>playwright-stealth</code> bypasses Cloudflare automatically and WhiskyBase serves review content without authentication.
             </div>
             <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;">
               <table class="env-table">
                 <thead>
                   <tr>
                     <th>Variable</th>
-                    <th>Descripción</th>
-                    <th>Tipo</th>
+                    <th>Description</th>
+                    <th>Type</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td class="env-key">STRAPI_BASE_URL</td>
-                    <td class="env-desc">URL base de tu API de Strapi</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Base URL of your Strapi API</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">STRAPI_API_KEY</td>
-                    <td class="env-desc">Token Bearer de Strapi (Settings → API Tokens)</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Strapi Bearer token (Settings → API Tokens)</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">VENICE_ADMIN_KEY</td>
-                    <td class="env-desc">API Key de Venice AI para generar descripciones</td>
-                    <td><span class="env-req required">Requerido</span></td>
-                  </tr>
-                  <tr>
-                    <td class="env-key">WHISKYBASE_USERNAME</td>
-                    <td class="env-desc">Usuario de tu cuenta WhiskyBase</td>
-                    <td><span class="env-req required">Requerido</span></td>
-                  </tr>
-                  <tr>
-                    <td class="env-key">WHISKYBASE_PASSWORD</td>
-                    <td class="env-desc">Contraseña de tu cuenta WhiskyBase</td>
-                    <td><span class="env-req required">Requerido</span></td>
+                    <td class="env-desc">Venice AI API key for generating descriptions</td>
+                    <td><span class="env-req required">Required</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">CRON_HOUR</td>
-                    <td class="env-desc">Hora UTC de ejecución diaria (0–23)</td>
-                    <td><span class="env-req optional">Opcional</span></td>
+                    <td class="env-desc">UTC hour for daily run (0–23)</td>
+                    <td><span class="env-req optional">Optional</span></td>
                   </tr>
                   <tr>
                     <td class="env-key">CRON_MINUTE</td>
-                    <td class="env-desc">Minuto de ejecución diaria (0–59)</td>
-                    <td><span class="env-req optional">Opcional</span></td>
+                    <td class="env-desc">Minute for daily run (0–59)</td>
+                    <td><span class="env-req optional">Optional</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -782,26 +739,23 @@ nano .env        <span class="cm"># o: vim .env  /  code .env</span></pre>
           <div class="step-header">
             <div class="step-number">4</div>
             <div class="step-info">
-              <div class="step-title">Guardar sesión de WhiskyBase</div>
-              <div class="step-desc">Abre Chrome, inicia sesión manualmente y guarda las cookies. Renueva cada 7–30 días.</div>
+              <div class="step-title">Verify everything works</div>
+              <div class="step-desc">Quick tests before going to production</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash</div>
-              <pre><span class="cm"># Asegúrate de que el venv está activado</span>
-source venv/bin/activate
+              <pre><span class="cm"># Test 1: Strapi connectivity</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} bottles')"
 
-python save_wb_session.py</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-            </div>
-            <div class="alert alert-warning">
-              <span class="alert-icon">⚠️</span>
-              Se abrirá una ventana de Chrome real. Inicia sesión en WhiskyBase, luego vuelve a la terminal y presiona <strong>Enter</strong>. Las cookies se guardan en <code>wb_session.json</code>.
-            </div>
-            <div class="alert alert-info">
-              <span class="alert-icon">🔄</span>
-              En Linux sin GUI (servidor remoto), usa X11 forwarding: <code>ssh -X usuario@servidor</code>, o renueva las cookies localmente y copia el <code>wb_session.json</code> al servidor.
+<span class="cm"># Test 2: Venice AI</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
+
+<span class="cm"># Test 3: Clean imports</span>
+python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
+python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -811,76 +765,50 @@ python save_wb_session.py</pre>
           <div class="step-header">
             <div class="step-number">5</div>
             <div class="step-info">
-              <div class="step-title">Verificar que todo funciona</div>
-              <div class="step-desc">Tests rápidos antes de ir a producción</div>
+              <div class="step-title">Run the cron in the background (production)</div>
+              <div class="step-desc">Use <code>nohup</code> so it keeps running after closing the terminal</div>
             </div>
           </div>
           <div class="step-body">
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash</div>
-              <pre><span class="cm"># Test 1: Conectividad con Strapi</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} botellas')"
-
-<span class="cm"># Test 2: Venice AI</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
-
-<span class="cm"># Test 3: Imports limpios</span>
-python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
-python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- STEP 6 -->
-        <div class="step">
-          <div class="step-header">
-            <div class="step-number">6</div>
-            <div class="step-info">
-              <div class="step-title">Correr el cron en background (producción)</div>
-              <div class="step-desc">Usa <code>nohup</code> para que siga corriendo aunque cierres la terminal</div>
-            </div>
-          </div>
-          <div class="step-body">
-            <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — iniciar en background</div>
-              <pre><span class="cm"># Producción — corre indefinidamente, sobrevive al cierre de terminal</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — start in background</div>
+              <pre><span class="cm"># Production — runs indefinitely, survives terminal close</span>
 nohup python cron_daily.py > logs/cron.log 2>&1 &
 
-<span class="cm"># Guarda el PID para poder detenerlo después</span>
+<span class="cm"># Save the PID so you can stop it later</span>
 echo $! > logs/cron.pid
-echo "Cron iniciado con PID $(cat logs/cron.pid)"</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+echo "Cron started with PID $(cat logs/cron.pid)"</pre>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — test inmediato (dispara ahora)</div>
-              <pre><span class="cm"># Útil para verificar que procesa correctamente</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — immediate test (fires now)</div>
+              <pre><span class="cm"># Useful to verify correct processing</span>
 python cron_daily.py --run-now</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — ver log en tiempo real</div>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — watch live log</div>
               <pre>tail -f logs/cron.log</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — detener el cron limpiamente</div>
-              <pre><span class="cm"># SIGTERM — el daemon termina la botella actual y sale</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — stop the cron cleanly</div>
+              <pre><span class="cm"># SIGTERM — daemon finishes the current bottle then exits</span>
 kill -TERM $(cat logs/cron.pid)
 
-<span class="cm"># Verificar que se detuvo</span>
+<span class="cm"># Verify it stopped</span>
 ps aux | grep cron_daily</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="code-block">
-              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — hora personalizada</div>
-              <pre><span class="cm"># Correr a las 6:30 AM UTC</span>
+              <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash — custom time</div>
+              <pre><span class="cm"># Run at 6:30 AM UTC</span>
 nohup python cron_daily.py --hour 6 --minute 30 > logs/cron.log 2>&1 &</pre>
-              <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
             <div class="alert alert-success">
               <span class="alert-icon">✅</span>
-              El cron corre una vez al día a medianoche UTC. El daemon termina siempre la botella en proceso antes de parar — nunca deja datos a medias.
+              The cron runs once a day at midnight UTC. The daemon always finishes the bottle in progress before stopping — it never leaves partial data.
             </div>
           </div>
         </div>
@@ -889,7 +817,7 @@ nohup python cron_daily.py --hour 6 --minute 30 > logs/cron.log 2>&1 &</pre>
     </div>
 
     <div class="footer">
-      Spiritory Whisky Scraper &bull; Configuración de producción
+      Spiritory Whisky Scraper &bull; Production Setup Guide
     </div>
 
   </div><!-- /container -->
@@ -908,10 +836,10 @@ nohup python cron_daily.py --hour 6 --minute 30 > logs/cron.log 2>&1 &</pre>
       // Extract plain text (strip HTML tags)
       const text = pre.innerText || pre.textContent;
       navigator.clipboard.writeText(text.trim()).then(() => {
-        btn.textContent = '✓ Copiado';
+        btn.textContent = '✓ Copied';
         btn.classList.add('copied');
         setTimeout(() => {
-          btn.textContent = 'Copiar';
+          btn.textContent = 'Copy';
           btn.classList.remove('copied');
         }, 2000);
       });

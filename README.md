@@ -82,15 +82,7 @@ copy .env.example .env
 
 Then open `.env` and fill in your credentials (see [Environment Variables](#environment-variables)).
 
-**8. Save WhiskyBase session (one-time)**
-
-```cmd
-python save_wb_session.py
-```
-
-A real Chrome window will open — log in to WhiskyBase manually, then press Enter in the terminal.
-
-**9. Run**
+**8. Run**
 
 Full backfill (one-time, all bottles):
 ```cmd
@@ -154,15 +146,7 @@ cp .env.example .env
 nano .env   # fill in your credentials
 ```
 
-**7. Save WhiskyBase session (one-time)**
-
-```bash
-python save_wb_session.py
-```
-
-A real Chrome window will open — log in to WhiskyBase manually, then press Enter.
-
-**8. Run**
+**7. Run**
 
 Full backfill (one-time, all bottles):
 ```bash
@@ -190,9 +174,6 @@ STRAPI_BASE_URL=https://your-strapi-instance.com/api
 STRAPI_API_KEY=your_strapi_bearer_token
 
 VENICE_ADMIN_KEY=your_venice_ai_api_key
-
-WHISKYBASE_USERNAME=your_whiskybase_username
-WHISKYBASE_PASSWORD=your_whiskybase_password
 
 # Optional: override cron trigger time (default: midnight UTC)
 # CRON_HOUR=0
@@ -254,19 +235,11 @@ Status tags: `[already had data]`, `[no wb data]`, `[ban]`, `[error]`
 
 ---
 
-## Renewing the WhiskyBase Session
+## WhiskyBase Access — No Login Required
 
-Session cookies are stored in `wb_session.json` (gitignored). They expire every 7–30 days.
+**No WhiskyBase account or session cookies are needed.**
 
-Signs of expiry in the logs:
-```
-[WhiskyBase] ⚠️  Session expired — reviews will be blurred.
-```
-
-To renew:
-```bash
-python save_wb_session.py
-```
+`playwright-stealth` patches Chromium's browser fingerprint to bypass Cloudflare, and WhiskyBase serves review content without authentication. This was confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login — all are empty. The scraper works out of the box.
 
 ---
 
@@ -276,7 +249,6 @@ python save_wb_session.py
 scraper_engine.py         Full backfill orchestrator
 cron_daily.py             Daily cron daemon
 checkpoint_manager.py     Checkpoint read/write (scraper_state.json)
-save_wb_session.py        WhiskyBase one-time login tool
 requirements.txt          Python dependencies
 
 integrations/
