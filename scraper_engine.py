@@ -1,26 +1,9 @@
 import argparse
-import sys
 import warnings
-warnings.filterwarnings("ignore", message=".*pkg_resources.*")
 warnings.filterwarnings("ignore", message=".*google.generativeai.*")
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Compatibility shim: playwright-stealth requires pkg_resources (deprecated since setuptools 81)
-try:
-    import pkg_resources # type: ignore
-except ImportError:
-    import importlib.resources
-    class MockPkgResources:
-        @staticmethod
-        def resource_string(package, resource_name):
-            return importlib.resources.files(package).joinpath(resource_name).read_bytes()
-    sys.modules['pkg_resources'] = MockPkgResources() # type: ignore
-
-    # playwright_stealth also statically imports it into importlib.metadata sometimes when patched
-    import importlib.metadata
-    importlib.metadata.resource_string = MockPkgResources.resource_string # type: ignore
 
 from datetime import datetime
 from integrations.strapi import fetch_bottles as live_fetch_bottles, update_bottle as live_update_bottle
@@ -74,8 +57,9 @@ def run_scraper(
 
     _logger = CSVLogger(mode=_csv_mode)
 
-    BAN_COOLDOWN = 300  # 5 minutes
-    MAX_BAN_RETRIES = 3
+    # Progressive cooldowns: each ban waits longer before retrying
+    BAN_COOLDOWNS = [600, 1200, 2400, 3600]  # 10, 20, 40, 60 minutes
+    MAX_BAN_RETRIES = 6
     ban_retries = 0
     processed_count = 0
 
@@ -154,8 +138,16 @@ def run_scraper(
                 reviews_text = wb_data.get("description_en_raw") or ""
                 tasting_tags = wb_data.get("tasting_tags", [])
 
-                emit("info", "info", f"  -> Got {len(reviews_text)} chars of review text, tags: {tasting_tags}",
+                emit("info", "info", f"  -> Tags scraped: {tasting_tags}",
                      bottle_id=b_id, bottle_name=b_name)
+                if reviews_text:
+                    preview = reviews_text[:500].replace('\n', ' ')
+                    suffix = "..." if len(reviews_text) > 500 else ""
+                    emit("info", "info", f"  -> Review text ({len(reviews_text)} chars): {preview}{suffix}",
+                         bottle_id=b_id, bottle_name=b_name)
+                else:
+                    emit("warning", "info", "  -> No review text found on WhiskyBase.",
+                         bottle_id=b_id, bottle_name=b_name)
 
                 # 2. Build payload — only include fields that are missing AND have source data
                 strapi_payload: dict = {}
@@ -250,11 +242,12 @@ def run_scraper(
                     emit("error", "ban", f"\n[FATAL] Banned {MAX_BAN_RETRIES} times. Stopping permanently.")
                     break
 
+                cooldown = BAN_COOLDOWNS[min(ban_retries - 1, len(BAN_COOLDOWNS) - 1)]
                 emit("warning", "ban", f"\n[BAN] WhiskyBase ban detected: {e}",
                      bottle_id=b_id, bottle_name=b_name)
                 emit("info", "ban",
-                     f"[BAN] Closing browser & waiting {BAN_COOLDOWN // 60} min before retry ({ban_retries}/{MAX_BAN_RETRIES})...")
-                time.sleep(BAN_COOLDOWN)
+                     f"[BAN] Closing browser & waiting {cooldown // 60} min before retry ({ban_retries}/{MAX_BAN_RETRIES})...")
+                time.sleep(cooldown)
                 emit("info", "ban", "[BAN] Cooldown complete. Resuming from checkpoint...")
                 hit_ban = True
                 break  # break for-loop → outer while re-fetches from checkpoint

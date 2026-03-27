@@ -9,8 +9,8 @@ mock_db.json
 _sim_snapshot.json
 live_scrape_results.json
 
-# Logs
-logs/
+# Logs (tracked — CSV reports are committed)
+# logs/  ← intentionally NOT ignored
 
 # Python
 __pycache__/

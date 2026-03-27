@@ -43,7 +43,7 @@ Download from [git-scm.com/download/win](https://git-scm.com/download/win) and i
 **3. Clone the repository**
 
 ```cmd
-git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
+git clone https://github.com/AlejandroTechFlap/spiritory-whisky-scraper.git
 cd spiritoni-whisky-scraper
 ```
 
@@ -66,10 +66,10 @@ venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-**6. Install Playwright browser**
+**6. Install Patchright browser**
 
 ```cmd
-playwright install chromium
+patchright install chromium
 ```
 
 **7. Configure environment variables**
@@ -116,7 +116,7 @@ brew install python@3.12
 **2. Clone the repository**
 
 ```bash
-git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
+git clone https://github.com/AlejandroTechFlap/spiritory-whisky-scraper.git
 cd spiritoni-whisky-scraper
 ```
 
@@ -133,10 +133,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**5. Install Playwright browser**
+**5. Install Patchright browser**
 
 ```bash
-playwright install chromium
+patchright install chromium
 ```
 
 **6. Configure environment variables**
@@ -174,6 +174,9 @@ STRAPI_BASE_URL=https://your-strapi-instance.com/api
 STRAPI_API_KEY=your_strapi_bearer_token
 
 VENICE_ADMIN_KEY=your_venice_ai_api_key
+
+# Optional: residential proxy to reduce Cloudflare bans (format: http://user:pass@ip:port)
+# PROXY_URL=
 
 # Optional: override cron trigger time (default: midnight UTC)
 # CRON_HOUR=0
@@ -239,7 +242,7 @@ Status tags: `[already had data]`, `[no wb data]`, `[ban]`, `[error]`
 
 **No WhiskyBase account or session cookies are needed.**
 
-`playwright-stealth` patches Chromium's browser fingerprint to bypass Cloudflare, and WhiskyBase serves review content without authentication. This was confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login — all are empty. The scraper works out of the box.
+`patchright` patches Chromium's fingerprint at the C++ level (CDP leaks, `navigator.webdriver`, UA consistency, WebGL renderer) to bypass Cloudflare. WhiskyBase serves review content without authentication — confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login: all are empty. The scraper works out of the box.
 
 ---
 

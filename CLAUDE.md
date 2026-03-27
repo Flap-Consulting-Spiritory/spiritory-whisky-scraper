@@ -14,7 +14,7 @@ The **Spiritory Whisky Scraper** is a Python-based data enrichment engine for wh
 ### Key Features
 - **Two run modes:** Full backfill (`scraper_engine.py`) and daily cron daemon (`cron_daily.py`)
 - **Stateful / Resumable:** `scraper_engine.py` uses `scraper_state.json` to track the last processed bottle ID
-- **Anti-Bot Resilience:** Random jitter delays, Playwright + `playwright-stealth` — no login or session cookies required
+- **Anti-Bot Resilience:** Random jitter delays, `patchright` (CDP-level fingerprint patching) + context rotation — no login or session cookies required
 - **No hallucinations:** Venice AI is only called when WhiskyBase returned actual review text
 
 ---
@@ -55,11 +55,11 @@ source venv/bin/activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Install Playwright browser (required for WhiskyBase scraping)
-playwright install chromium
+# 3. Install Patchright browser (required for WhiskyBase scraping)
+patchright install chromium
 ```
 
-> **No WhiskyBase login required.** `playwright-stealth` patches Chromium's browser fingerprint to bypass Cloudflare, and WhiskyBase serves review content without authentication — confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login: all are empty. No session file is needed.
+> **No WhiskyBase login required.** `patchright` patches Chromium's browser fingerprint at the C++ level to bypass Cloudflare, and WhiskyBase serves review content without authentication — confirmed by inspecting cookies, `localStorage`, and `sessionStorage` after login: all are empty. No session file is needed.
 
 ### Environment Variables (`.env`)
 ```
@@ -67,9 +67,12 @@ STRAPI_BASE_URL=https://strapi.spiritory.com/api
 STRAPI_API_KEY=<your Strapi bearer token>
 VENICE_ADMIN_KEY=<Venice AI API key>
 
+# Optional — residential proxy to reduce Cloudflare bans (http://user:pass@ip:port)
+# PROXY_URL=
+
 # Optional — override cron trigger time (default: midnight UTC)
-CRON_HOUR=0
-CRON_MINUTE=0
+# CRON_HOUR=0
+# CRON_MINUTE=0
 ```
 
 ---
@@ -138,7 +141,7 @@ After exhaustive investigation (multiple nodriver/CDP approaches, browser cookie
 - `localStorage` and `sessionStorage` are both empty (`{}`)
 - Review content is served to any request that passes Cloudflare's bot check
 
-`playwright-stealth` handles the Cloudflare bypass by patching Chromium's browser fingerprint (WebGL, navigator properties, etc.). No credentials, session file, or `save_wb_session.py` script is needed. The `wb_session.json` file and `WHISKYBASE_USERNAME`/`WHISKYBASE_PASSWORD` env vars have been removed.
+`patchright` handles the Cloudflare bypass by patching Chromium's fingerprint at the C++ level (CDP leaks, WebGL renderer, `navigator.webdriver`, UA consistency). No credentials, session file, or `save_wb_session.py` script is needed. The `wb_session.json` file and `WHISKYBASE_USERNAME`/`WHISKYBASE_PASSWORD` env vars have been removed.
 
 > **History:** `save_wb_session.py` was originally written using **nodriver** to collect cookies via CDP (`network.get_cookies`). Chrome 130+ introduced a `CookiePartitionKey` parsing bug that causes all CDP cookie retrieval methods to hang indefinitely. After exhausting every CDP approach (`storage.get_cookies`, `network.get_all_cookies`, explicit-URL variants, response header interception), we discovered via Cookie-Editor that WhiskyBase simply has no cookies to collect — making the entire session-saving approach unnecessary.
 
@@ -147,8 +150,8 @@ After exhaustive investigation (multiple nodriver/CDP approaches, browser cookie
 ## Pre-Production Validation Checklist
 
 ```bash
-# 1. Confirm Playwright browser is installed
-playwright install chromium
+# 1. Confirm Patchright browser is installed
+patchright install chromium
 
 # 2. Test Strapi connectivity
 python -c "
@@ -181,7 +184,7 @@ python -c "from cron_daily import run_cron_cycle; print('OK')"
 
 - **Modular integrations:** Each data source lives in `integrations/`. Interface: `fetch_bottles() -> list[dict]` / `update_bottle(id, payload) -> bool`
 - **No hallucinations:** Only call Venice AI if `description_en_raw` from WhiskyBase is non-empty. Only write tasting notes if WhiskyBase returned tags
-- **Error handling:** `ScrapeBanException` → 5-min cooldown + retry (max 3 times). `ScrapeHardBanException` → stop immediately. All other per-bottle exceptions → log `[error]` and halt
-- **Warnings suppression:** `pkg_resources` deprecation warnings from `playwright-stealth` are suppressed at entry points with `warnings.filterwarnings`. Intentional — the library still works
+- **Error handling:** `ScrapeBanException` → Tenacity retries with 30–180s exponential backoff (5 attempts). If that exhausts → outer ban loop with progressive cooldowns (10→20→40→60 min), max 6 retries. `ScrapeHardBanException` → propagates immediately. All other per-bottle exceptions → log `[error]` and halt
+- **Warnings suppression:** `google.generativeai` deprecation warnings are suppressed at entry points with `warnings.filterwarnings`
 - **Type hints:** Maintain `def fetch_bottles() -> list[dict]:` style across all functions
 - **Jitter:** Always call `random_delay()` before WhiskyBase requests

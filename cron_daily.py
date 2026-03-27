@@ -20,29 +20,14 @@ Environment (optional overrides):
 import argparse
 import os
 import signal
-import sys
 import time
 import warnings
 
-warnings.filterwarnings("ignore", message=".*pkg_resources.*")
 warnings.filterwarnings("ignore", message=".*google.generativeai.*")
 
 from dotenv import load_dotenv
 load_dotenv()
 
-# Compatibility shim: playwright-stealth requires pkg_resources (deprecated since setuptools 81)
-try:
-    import pkg_resources  # type: ignore
-except ImportError:
-    import importlib.resources
-    class MockPkgResources:
-        @staticmethod
-        def resource_string(package, resource_name):
-            return importlib.resources.files(package).joinpath(resource_name).read_bytes()
-    sys.modules['pkg_resources'] = MockPkgResources()  # type: ignore
-
-    import importlib.metadata
-    importlib.metadata.resource_string = MockPkgResources.resource_string  # type: ignore
 
 from datetime import datetime, timedelta, timezone
 

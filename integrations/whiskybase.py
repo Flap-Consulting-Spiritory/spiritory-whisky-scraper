@@ -1,16 +1,16 @@
-from playwright.sync_api import sync_playwright, Browser, BrowserContext, Page
-from playwright_stealth import stealth_sync
+from patchright.sync_api import sync_playwright, Browser, BrowserContext, Page
 from bs4 import BeautifulSoup
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 import re
 import os
+import random
+import time
 
 # Optional proxy format: http://username:password@ip:port
 PROXY_URL = os.environ.get("PROXY_URL", None)
 
-WB_USERNAME = os.environ.get("WHISKYBASE_USERNAME", "")
-WB_PASSWORD = os.environ.get("WHISKYBASE_PASSWORD", "")
-WB_SESSION_FILE = os.path.join(os.path.dirname(__file__), "..", "wb_session.json")
+# Refresh the browser context after this many requests to avoid fingerprint tracking
+_CONTEXT_REFRESH_EVERY = 10
 
 class ScrapeBanException(Exception):
     """Raised when WhiskyBase shows a Cloudflare captcha — safe to retry."""
@@ -23,84 +23,100 @@ class ScrapeHardBanException(Exception):
 
 
 # --- Shared browser session ---
-# Kept alive across calls so login cookies persist for all scrapes in a process.
+# Mutable dict avoids global declarations for counter state.
+# Refreshed every _CONTEXT_REFRESH_EVERY requests to rotate fingerprint.
 
-_playwright = None
-_browser: Browser | None = None
-_context: BrowserContext | None = None
-_logged_in: bool = False
+_session: dict = {
+    "playwright": None,
+    "browser": None,
+    "context": None,
+    "requests_count": 0,
+}
+
+# Realistic desktop viewport options — avoid always-1920x1080 headless signature
+_VIEWPORTS = [
+    {"width": 1920, "height": 1080},
+    {"width": 1440, "height": 900},
+    {"width": 1366, "height": 768},
+    {"width": 1536, "height": 864},
+]
 
 
 def _get_context() -> BrowserContext:
-    """Return (or create) the shared browser context, logging in once if credentials exist."""
-    global _playwright, _browser, _context, _logged_in
+    """Return (or create) the shared browser context. Refreshes every N requests."""
+    # Proactively rotate fingerprint after every N requests
+    if (
+        _session["context"] is not None
+        and _session["requests_count"] > 0
+        and _session["requests_count"] % _CONTEXT_REFRESH_EVERY == 0
+    ):
+        print(f"    [Anti-Ban] Refreshing browser context after {_session['requests_count']} requests...")
+        close_session()
 
-    if _context is None:
-        _playwright = sync_playwright().start()
+    if _session["context"] is None:
+        _session["playwright"] = sync_playwright().start()
 
-        launch_args: dict = {"headless": True}
+        launch_kwargs: dict = {
+            "headless": True,
+            "channel": "chromium",  # New headless mode: full browser fidelity
+            "args": [
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        }
         if PROXY_URL:
-            launch_args["proxy"] = {"server": PROXY_URL}
+            launch_kwargs["proxy"] = {"server": PROXY_URL}
 
-        _browser = _playwright.chromium.launch(**launch_args)
-        _context = _browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
+        _session["browser"] = _session["playwright"].chromium.launch(**launch_kwargs)
+        _session["context"] = _session["browser"].new_context(
+            # UA must match Playwright 1.50's bundled Chromium (132)
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
+            viewport=random.choice(_VIEWPORTS),
             device_scale_factor=1,
             has_touch=False,
             locale="en-US",
             timezone_id="America/New_York",
         )
 
-    if not _logged_in:
-        session_path = os.path.normpath(WB_SESSION_FILE)
-        if os.path.exists(session_path):
-            import json
-            with open(session_path) as f:
-                cookies = json.load(f)
-            _context.add_cookies(cookies)
-            _logged_in = True
-            print(f"[WhiskyBase] Session loaded from {session_path} ({len(cookies)} cookies)")
-
-    return _context
+    _session["requests_count"] += 1
+    return _session["context"]
 
 
 def close_session():
     """Closes the shared browser session safely."""
-    global _playwright, _browser, _context, _logged_in
-    
     try:
-        if _browser:
+        if _session["browser"]:
             try:
-                _browser.close()
+                _session["browser"].close()
             except Exception as e:
                 print(f"[WhiskyBase] Error closing browser: {e}")
     finally:
         try:
-            if _playwright:
-                _playwright.stop()
+            if _session["playwright"]:
+                _session["playwright"].stop()
         except Exception as e:
             print(f"[WhiskyBase] Error stopping playwright: {e}")
         finally:
-            _browser = None
-            _context = None
-            _playwright = None
-            _logged_in = False
+            _session["browser"] = None
+            _session["context"] = None
+            _session["playwright"] = None
+            _session["requests_count"] = 0
 
 
 @retry(
-    wait=wait_exponential(multiplier=1, min=4, max=15),
+    wait=wait_exponential(multiplier=2, min=30, max=180),
     stop=stop_after_attempt(5),
     retry=retry_if_exception_type(ScrapeBanException),
     reraise=True,
 )
 def scrape_bottle_data(whiskybase_id: str) -> dict:
     """
-    Scrapes the top 2 reviews and top 2 tasting tags from a WhiskyBase bottle page.
+    Scrapes the top 2 reviews and top 5 tasting tags from a WhiskyBase bottle page.
     Returns:
         {
             "description_en_raw": str | None,  # top 2 reviews joined by double newline
-            "tasting_tags": list[str],          # top 2 tag names by vote count
+            "tasting_tags": list[str],          # top 5 tag names by vote count
         }
     """
     numeric_id = re.sub(r'[^0-9]', '', whiskybase_id)
@@ -114,28 +130,33 @@ def scrape_bottle_data(whiskybase_id: str) -> dict:
     try:
         context = _get_context()
         page = context.new_page()
-        stealth_sync(page)
+        # patchright patches CDP/fingerprinting automatically — no stealth_sync needed
 
         # Go to the bottle page
         response = page.goto(url, wait_until="domcontentloaded", timeout=45000)
 
-        # Check for ban / block
+        # Check for hard ban / block
         if response and response.status in [403, 429]:
             page.close()
             raise ScrapeHardBanException(f"Blocked by WhiskyBase! Status: {response.status}")
+
+        # Brief human-like interaction: pause then scroll before extracting HTML
+        time.sleep(random.uniform(1.0, 3.0))
+        page.evaluate(f"window.scrollBy(0, {random.randint(300, 600)})")
+        time.sleep(random.uniform(0.5, 1.5))
 
         html = page.content()
         final_url = page.url  # capture before close — page.url raises after close()
         page.close()
 
-        # Check for Cloudflare Challenge
-        if "Just a moment..." in html or "cf-browser-verification" in html:
-            raise ScrapeBanException("Cloudflare Captcha hit!")
-
-        # Check for expired / missing session (redirected to login page)
-        if final_url and "/account/login" in final_url:
-            print("\n[WhiskyBase] ⚠️  Session expired — reviews will be blurred.")
-            print("  Run: python save_wb_session.py   and then restart the scraper.\n")
+        # Check for Cloudflare Challenge (multiple detection patterns)
+        if any(marker in html for marker in (
+            "Just a moment...",
+            "cf-browser-verification",
+            "cf-turnstile",
+            "challenge-platform",
+        )):
+            raise ScrapeBanException("Cloudflare challenge detected!")
 
         soup = BeautifulSoup(html, 'html.parser')
 
@@ -164,7 +185,7 @@ def scrape_bottle_data(whiskybase_id: str) -> dict:
         if top_reviews:
             data["description_en_raw"] = "\n\n".join(r["text"] for r in top_reviews)
 
-        # ── Tasting tags: top 2 by vote count (data-num attribute) ───────────
+        # ── Tasting tags: top 5 by vote count (data-num attribute) ───────────
         tag_entries = []
         for tag_elem in soup.select("a.btn-tastingtag"):
             name_div = tag_elem.select_one(".tag-name")

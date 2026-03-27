@@ -420,7 +420,7 @@ git --version</pre>
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> CMD</div>
               <pre><span class="cm"># Clone repository (adjust the URL to yours)</span>
-git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
+git clone https://github.com/AlejandroTechFlap/spiritory-whisky-scraper.git
 cd spiritoni-whisky-scraper
 
 <span class="cm"># Create and activate virtual environment</span>
@@ -430,8 +430,8 @@ venv\Scripts\activate
 <span class="cm"># Install dependencies</span>
 pip install -r requirements.txt
 
-<span class="cm"># Install Chromium for Playwright</span>
-playwright install chromium</pre>
+<span class="cm"># Install Chromium for Patchright</span>
+patchright install chromium</pre>
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
@@ -467,7 +467,7 @@ notepad .env</pre>
             </div>
             <div class="alert alert-info">
               <span class="alert-icon">ℹ️</span>
-              No WhiskyBase credentials needed. <code>playwright-stealth</code> bypasses Cloudflare automatically and WhiskyBase serves review content without authentication.
+              No WhiskyBase credentials needed. <code>patchright</code> patches Chromium's fingerprint at the C++ level to bypass Cloudflare — WhiskyBase serves review content without authentication.
             </div>
             <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;">
               <table class="env-table">
@@ -526,11 +526,14 @@ notepad .env</pre>
 python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} bottles')"
 
 <span class="cm"># Test 2: Venice AI</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
+python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(f'Venice AI OK: {generate_description(\"Smoky, vanilla finish.\", \"Test Whisky\")}')"
 
 <span class="cm"># Test 3: Clean imports</span>
 python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
-python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
+python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"
+
+<span class="cm"># Test 4: WhiskyBase Scrape</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.whiskybase import scrape_bottle_data, close_session; print('Extrayendo datos de la botella 24413...'); data=scrape_bottle_data('24413'); print(f'\nWhiskyBase OK! Datos obtenidos:\n{data}'); close_session()"</pre>
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
@@ -644,7 +647,7 @@ git --version</pre>
             <div class="code-block">
               <div class="code-label"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span> bash</div>
               <pre><span class="cm"># Clone repository (adjust the URL to yours)</span>
-git clone https://github.com/AlejandroSIlvaRodriguez/spiritoni-whisky-scraper.git
+git clone https://github.com/AlejandroTechFlap/spiritory-whisky-scraper.git
 cd spiritoni-whisky-scraper
 
 <span class="cm"># Create and activate virtual environment</span>
@@ -654,8 +657,8 @@ source venv/bin/activate
 <span class="cm"># Install dependencies</span>
 pip install -r requirements.txt
 
-<span class="cm"># Install Chromium for Playwright</span>
-playwright install chromium</pre>
+<span class="cm"># Install Chromium for Patchright</span>
+patchright install chromium</pre>
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
@@ -691,7 +694,7 @@ nano .env        <span class="cm"># or: vim .env  /  code .env</span></pre>
             </div>
             <div class="alert alert-info">
               <span class="alert-icon">ℹ️</span>
-              No WhiskyBase credentials needed. <code>playwright-stealth</code> bypasses Cloudflare automatically and WhiskyBase serves review content without authentication.
+              No WhiskyBase credentials needed. <code>patchright</code> patches Chromium's fingerprint at the C++ level to bypass Cloudflare — WhiskyBase serves review content without authentication.
             </div>
             <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;">
               <table class="env-table">
@@ -750,11 +753,14 @@ nano .env        <span class="cm"># or: vim .env  /  code .env</span></pre>
 python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.strapi import fetch_bottles; b=fetch_bottles(limit=3); print(f'Strapi OK: {len(b)} bottles')"
 
 <span class="cm"># Test 2: Venice AI</span>
-python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(generate_description('Smoky, vanilla finish.', 'Test Whisky'))"
+python -c "from dotenv import load_dotenv; load_dotenv(); from utils.gemini import generate_description; print(f'Venice AI OK: {generate_description(\"Smoky, vanilla finish.\", \"Test Whisky\")}')"
 
 <span class="cm"># Test 3: Clean imports</span>
 python -c "from scraper_engine import run_scraper; print('scraper_engine OK')"
-python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"</pre>
+python -c "from cron_daily import run_cron_cycle; print('cron_daily OK')"
+
+<span class="cm"># Test 4: WhiskyBase Scrape</span>
+python -c "from dotenv import load_dotenv; load_dotenv(); from integrations.whiskybase import scrape_bottle_data, close_session; print('Extrayendo datos de la botella 24413...'); data=scrape_bottle_data('24413'); print(f'\nWhiskyBase OK! Datos obtenidos:\n{data}'); close_session()"</pre>
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
