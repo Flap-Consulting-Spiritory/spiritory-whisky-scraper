@@ -188,3 +188,14 @@ python -c "from cron_daily import run_cron_cycle; print('OK')"
 - **Warnings suppression:** `google.generativeai` deprecation warnings are suppressed at entry points with `warnings.filterwarnings`
 - **Type hints:** Maintain `def fetch_bottles() -> list[dict]:` style across all functions
 - **Jitter:** Always call `random_delay()` before WhiskyBase requests
+
+---
+
+## Global Invariants (apply to all sessions)
+
+See `~/.claude/CLAUDE.md` for the full rules. Summary:
+
+1. **Document First** — update/create spec with `[DRAFT]` before writing any code
+2. **Max 300 lines per file** — split proactively at 250 lines; single responsibility; DRY
+3. **WebSearch before coding** — always fetch latest docs for any external library or API
+4. **MANDATORY: Ask before architecture** — never assume folder structure, patterns, libraries, schemas, or any architectural decision. Always ask Alejandro and wait for confirmation

@@ -12,6 +12,9 @@ live_scrape_results.json
 # Logs (tracked — CSV reports are committed)
 # logs/  ← intentionally NOT ignored
 
+# Per-run text logs from correccion/improve_descriptions.py
+correccion/logs/*.log
+
 # Python
 __pycache__/
 *.pyc

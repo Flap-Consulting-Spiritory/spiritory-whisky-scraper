@@ -1,0 +1,11 @@
+{
+  "name": "Spiritory Whisky Scraper",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "postStartCommand": "npm install -g @anthropic-ai/claude-code@latest",
+  "containerEnv": { "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}" },
+  "remoteEnv": { "ANTHROPIC_API_KEY": "${containerEnv:ANTHROPIC_API_KEY}" }
+}
