@@ -7,9 +7,9 @@ A Python data enrichment engine for whisky bottle records stored in Strapi CMS. 
 For each bottle:
 1. Fetches bottles from Strapi that have a `wbId` but are missing `description` or `tasting_note_1`
 2. Scrapes WhiskyBase for top 2 reviews + top 5 tasting tags
-3. Calls Venice AI to generate 2–3 sentence marketing descriptions in **5 languages** (DE, EN, ES, FR, IT)
+3. Calls Venice AI with the **enriched prompt** (few-shot style examples + full Strapi bottle metadata + scraped reviews) to generate **4–6 sentence, 80–150 word** marketing descriptions in **5 languages** (DE, EN, ES, FR, IT) — same quality target as the one-shot correction batch
 4. Writes only missing fields — never overwrites existing data, never invents content
-5. Saves a checkpoint after each bottle so runs can be safely interrupted and resumed
+5. **Backfill only:** saves a checkpoint (`scraper_state.json`) after each bottle so runs can be safely interrupted and resumed. Cron mode does not write this file.
 
 ## Two run modes
 
@@ -197,6 +197,9 @@ Processes all bottles in Strapi that are missing `description` or `tasting_note_
 # Run with default batch size (100)
 python scraper_engine.py --batch 100
 
+# Group 5 bottles per Venice call (cheaper, automatic per-bottle fallback on failure)
+python scraper_engine.py --batch 100 --venice-batch 5
+
 # Reset checkpoint and start from scratch
 python scraper_engine.py --reset-checkpoint --batch 100
 ```
@@ -215,8 +218,14 @@ python cron_daily.py --hour 6 --minute 30
 # Fire immediately, then enter normal schedule (useful for testing)
 python cron_daily.py --run-now
 
+# Group 5 bottles per Venice call inside each daily cycle
+python cron_daily.py --venice-batch 5
+
 # Production background run (Linux/macOS)
 nohup python cron_daily.py > logs/cron.log 2>&1 &
+
+# Stop cleanly (finishes current bottle, then exits)
+kill -TERM <pid>
 ```
 
 ### CSV Reports
@@ -260,15 +269,36 @@ integrations/
   whiskyhunter.py         WhiskyHunter integration
 
 utils/
-  gemini.py               Venice AI description generator
+  venice.py               Venice AI client (live + batch, with typed errors)
+  prompts.py              Shared prompt builders (few-shot + metadata)
+  metadata.py             Strapi metadata extraction + formatter
+  pipeline.py             Per-bottle helpers (build payload, flush Venice queue)
   csv_logger.py           Appends rows to logs/scraper.csv
   tasting_tags.py         Validates tags against Strapi enum
   jitter.py               Random delays for anti-bot behavior
+
+correccion/
+  prompt_templates.py     Back-compat shim → re-exports from utils/prompts
+  improve_descriptions.py One-shot correction batch (pre-existing descriptions)
+  batch_runner.py         Batched Venice client for the correction pipeline
+  apply_corrections.py    Applies approved corrections to Strapi
+
+tests/                    pytest suite — 56 tests covering prompts, venice, pipeline, scraper, cron
 
 logs/
   scraper.csv             Persistent run log (all runs, append-only)
   cron.log                Cron daemon stdout (if redirected)
 ```
+
+---
+
+## Running the Tests
+
+```bash
+python -m pytest tests/ -q
+```
+
+The suite runs without requiring `openai` or `patchright` installed — `tests/conftest.py` stubs those heavy deps for import-time compatibility.
 
 ---
 

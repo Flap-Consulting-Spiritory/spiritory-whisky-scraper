@@ -9,15 +9,17 @@ The **Spiritory Whisky Scraper** is a Python-based data enrichment engine for wh
 ### What it does per bottle
 1. Fetches bottles from Strapi that have a `wbId` but are missing `description` or `tasting_note_1`
 2. Scrapes the WhiskyBase page for that bottle: top 2 reviews + top 5 tasting tags
-3. If reviews were found, calls Venice AI to generate a 2–3 sentence marketing description in 5 languages (de, en, es, fr, it)
+3. If reviews were found, calls Venice AI with the **enriched prompt** (few-shot style examples + full Strapi bottle metadata + scraped reviews) to generate a **4–6 sentence, 80–150 word** marketing description in 5 languages (de, en, es, fr, it). Same prompt quality as the one-shot correction pipeline — no separate polish pass needed.
 4. Only writes fields that are missing AND have real source data — never overwrites existing data, never invents content
-5. Saves a checkpoint after each successful bottle so runs can be safely resumed
+5. **Backfill only:** Saves a checkpoint (`scraper_state.json`) after each successful bottle so runs can be resumed. Cron mode does not write this file.
 
 ### Key Features
 - **Two run modes:** Full backfill (`scraper_engine.py`) and daily cron daemon (`cron_daily.py`)
-- **Stateful / Resumable:** `scraper_engine.py` uses `scraper_state.json` to track the last processed bottle ID
+- **Stateful / Resumable (backfill only):** `scraper_engine.py` uses `scraper_state.json` to track the last processed bottle ID. `cron_daily.py` filters by Strapi `publishedAt` instead and never mutates the checkpoint.
 - **Anti-Bot Resilience:** Random jitter delays, `patchright` (CDP-level fingerprint patching) + context rotation — no login or session cookies required
 - **No hallucinations:** Venice AI is only called when WhiskyBase returned actual review text
+- **Graceful SIGTERM:** `cron_daily.py` passes a `stop_event` into the scraper. A mid-run SIGTERM aborts after the current bottle instead of finishing the entire batch.
+- **Optional Venice batching:** `--venice-batch N` (default 1) groups N bottles into one Venice call to amortize the few-shot example tokens. Falls back to per-bottle calls on batch failure.
 
 ---
 
@@ -35,10 +37,14 @@ integrations/
   whiskyhunter.py         WhiskyHunter integration (pricing data)
 
 utils/
-  gemini.py               Venice AI — multilingual description generator
-  csv_logger.py           CSVLogger — writes logs/scraper_{date}_{time}_{mode}.csv
+  venice.py               Venice AI client — generate_description_live() + generate_descriptions_batch()
+  prompts.py              Shared prompt builders (few-shot examples + metadata formatter)
+                          — used by both live cron and correccion/ pipeline
+  csv_logger.py           CSVLogger — appends rows to logs/scraper.csv
   tasting_tags.py         normalize_tag() — validates against Strapi enum
   jitter.py               random_delay() for humanized request timing
+
+tests/                    pytest suite — prompts, venice client, scraper engine, cron
 
 logs/                     CSV reports from each run (auto-generated, gitignored)
 scraper_state.json        Checkpoint state file (auto-generated, do not commit)
@@ -88,11 +94,14 @@ Fetches every bottle in Strapi that has a `wbId` but is missing `description` or
 ```bash
 python scraper_engine.py --batch 100
 
+# Group 5 bottles into one Venice call (cheaper, still per-bottle fallback on failure)
+python scraper_engine.py --batch 100 --venice-batch 5
+
 # Reset checkpoint and start from the beginning
 python scraper_engine.py --reset-checkpoint --batch 100
 ```
 
-Output: CSV report in `logs/scraper_{date}_{time}_live.csv`
+Output: rows appended to `logs/scraper.csv` with `mode=live`
 
 ### Daily Cron Daemon — production continuous mode
 
@@ -105,6 +114,9 @@ python cron_daily.py --hour 0 --minute 0
 # Fire immediately then enter normal schedule (useful to verify setup)
 python cron_daily.py --run-now
 
+# Group 5 bottles per Venice call inside each daily cycle
+python cron_daily.py --venice-batch 5
+
 # Background production (redirect output to log file)
 nohup python cron_daily.py > logs/cron.log 2>&1 &
 
@@ -115,7 +127,7 @@ python cron_daily.py --hour 6 --minute 30
 kill -TERM <pid>   # daemon finishes current bottle then exits
 ```
 
-Output: CSV report in `logs/scraper_{date}_{time}_cron.csv` after each daily run.
+Output: rows appended to `logs/scraper.csv` with `mode=cron`.
 
 ---
 
@@ -163,12 +175,16 @@ b = fetch_bottles(limit=3)
 print(f'OK: {len(b)} bottles, first id={b[0][\"id\"] if b else None}')
 "
 
-# 3. Test Venice AI (description generation)
+# 3. Test Venice AI (enriched description generation with metadata)
 python -c "
 from dotenv import load_dotenv; load_dotenv()
-from utils.gemini import generate_description
-print(generate_description('Smoky, rich, vanilla finish.', 'Test Whisky'))
+from utils.venice import generate_description_live
+meta = {'productAge': 16, 'volumeInPercent': 46.0, 'category': 'Single Malt'}
+print(generate_description_live('Smoky, rich, vanilla finish.', 'Test Whisky', meta))
 "
+
+# 3b. Run the test suite
+python -m pytest tests/ -q
 
 # 4. Test cron daemon startup
 python cron_daily.py --hour 0 --minute 0

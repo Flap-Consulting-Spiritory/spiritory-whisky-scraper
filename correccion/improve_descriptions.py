@@ -23,6 +23,7 @@ import requests
 # Add parent dir to path so we can import project modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils.jitter import random_delay
+from utils.metadata import extract_metadata as _extract_metadata_shared
 from integrations.strapi import get_headers, STRAPI_BASE_URL
 from correccion.prompt_templates import build_improvement_prompt
 from correccion.batch_runner import setup_run_logger, process_batch
@@ -49,25 +50,10 @@ def fetch_bottle_by_id(bottle_id: int) -> dict | None:
 
 
 def extract_metadata(bottle: dict) -> dict:
-    """Extract relevant metadata fields from a Strapi bottle record."""
-    fields = [
-        "name", "productAge", "volumeInPercent", "category", "subCategory",
-        "brand", "bottlerName", "bottelingSerie", "distilledYear",
-        "yearBottled", "bottleSizeInMl", "numberOfBottles", "batchNumber",
-    ]
-    meta = {k: bottle.get(k) for k in fields if bottle.get(k) is not None}
-
-    # Normalize ABV: Strapi stores as "per-ten" (e.g. 470 = 47.0%)
-    abv = meta.get("volumeInPercent")
-    if abv is not None and isinstance(abv, (int, float)) and abv > 100:
-        meta["volumeInPercent"] = round(abv / 10, 1)
-
-    # Clean sentinel values (-1 means unknown)
-    for key in ("productAge", "numberOfBottles"):
-        if meta.get(key) is not None and meta[key] < 0:
-            del meta[key]
-
-    return meta
+    """Extract relevant metadata fields from a Strapi bottle record.
+    Delegates to `utils.metadata.extract_metadata` so live + correction runs
+    share one source of truth."""
+    return _extract_metadata_shared(bottle)
 
 
 def get_current_description_en(bottle: dict) -> str:
