@@ -72,7 +72,11 @@ def fetch_bottles(
         if not page:
             break
 
-        all_items.extend(page)
+        if limit:
+            remaining = limit - len(all_items)
+            all_items.extend(page[:remaining])
+        else:
+            all_items.extend(page)
         print(f"[Strapi] Fetched {len(all_items)} SKUs so far...")
 
         if limit and len(all_items) >= limit:
