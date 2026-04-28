@@ -1,7 +1,7 @@
 """Tests for cron_daily scheduling + SIGTERM plumbing."""
 
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,6 +29,17 @@ def test_next_trigger_tomorrow_if_same_minute_now():
     # Exact same time as now: must be tomorrow (strictly in future)
     trigger = cron_daily.next_trigger_dt(hour=12, minute=0, now=_now_utc())
     assert trigger == datetime(2026, 3, 16, 12, 0, tzinfo=timezone.utc)
+
+
+def test_target_day_for_run_uses_previous_utc_day():
+    target = cron_daily.target_day_for_run(datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc))
+    assert target == date(2026, 3, 14)
+
+
+def test_day_window_utc_returns_closed_day_bounds():
+    start, end = cron_daily.day_window_utc(date(2026, 3, 14))
+    assert start == datetime(2026, 3, 14, 0, 0, tzinfo=timezone.utc)
+    assert end == datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc)
 
 
 def test_sigterm_handler_sets_stop_event(monkeypatch):
@@ -67,7 +78,7 @@ def test_sleep_until_returns_when_stop_event_set():
     cron_daily._STOP.clear()
 
 
-def test_run_cron_cycle_passes_stop_event_to_scraper(monkeypatch):
+def test_run_cron_cycle_passes_created_window_and_stop_event_to_scraper(monkeypatch):
     """Regression guard: the cron cycle must forward the shared stop event
     and the venice_batch flag into run_scraper."""
     captured = {}
@@ -75,14 +86,12 @@ def test_run_cron_cycle_passes_stop_event_to_scraper(monkeypatch):
         captured.update(kwargs)
     monkeypatch.setattr(cron_daily, "run_scraper", _fake_run)
     cron_daily._STOP.clear()
-    cron_daily.run_cron_cycle(batch_size=50, venice_batch=3)
+    cron_daily.run_cron_cycle(batch_size=50, venice_batch=3, target_day=date(2026, 3, 14))
     assert captured["stop_event"] is cron_daily._STOP
     assert captured["venice_batch"] == 3
     assert captured["batch_size"] == 50
-    assert captured["published_since"] is not None
-    # published_since should be ~24h before now
-    delta = datetime.now(timezone.utc) - captured["published_since"]
-    assert timedelta(hours=23, minutes=55) < delta < timedelta(hours=24, minutes=5)
+    assert captured["created_since"] == datetime(2026, 3, 14, 0, 0, tzinfo=timezone.utc)
+    assert captured["created_until"] == datetime(2026, 3, 15, 0, 0, tzinfo=timezone.utc)
 
 
 def test_run_cron_cycle_swallows_scraper_errors(monkeypatch, capsys):

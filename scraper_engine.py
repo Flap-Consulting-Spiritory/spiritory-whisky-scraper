@@ -1,10 +1,12 @@
 """Spiritory Whisky Scraper — orchestration loop.
 
-Two run modes (selected by the presence of `published_since`):
+Two run modes (selected by the presence of a time filter):
   * Full backfill — iterates Strapi by ascending id, uses `scraper_state.json`
     as a resumable ID-based checkpoint.
-  * Cron — fetches bottles published in the last N hours. Does NOT mutate the
-    checkpoint file (the backfill's state stays intact across cron runs).
+  * Cron — fetches bottles in a bounded createdAt/publishedAt window. Does NOT
+    mutate the checkpoint file (the backfill's state stays intact across cron
+    runs). Production daily cron uses createdAt because publishedAt changes
+    when Strapi updates a SKU.
 
 Per bottle:
   1. Skip if already complete (description + both tasting notes).
@@ -44,6 +46,8 @@ from utils.pipeline import BottleTask, build_payload, flush_venice_queue
 def run_scraper(
     batch_size: int = 100,
     published_since: datetime | None = None,
+    created_since: datetime | None = None,
+    created_until: datetime | None = None,
     event_callback=None,
     stop_event=None,
     venice_batch: int = 1,
@@ -52,8 +56,12 @@ def run_scraper(
 
     Args:
         batch_size: Maximum bottles to process this run.
-        published_since: If set, cron mode (time filter, no checkpoint writes).
-            If None, backfill mode (id-based checkpoint).
+        published_since: If set, cron mode filtered by Strapi publishedAt.
+            Retained for compatibility; daily production cron should prefer
+            created_since/created_until because publishedAt changes on updates.
+        created_since: If set, cron mode filtered by Strapi createdAt >= value.
+        created_until: If set, cron mode filtered by Strapi createdAt < value.
+            If no time filters are set, backfill mode uses id checkpoints.
         event_callback: Optional callable(event: dict) for structured events.
         stop_event: Optional threading.Event — if set, loop exits gracefully.
         venice_batch: Group N bottles per Venice call (default 1 = per-bottle).
@@ -70,7 +78,7 @@ def run_scraper(
     def stopped() -> bool:
         return stop_event is not None and stop_event.is_set()
 
-    is_cron = published_since is not None
+    is_cron = any(v is not None for v in (published_since, created_since, created_until))
     mode = "cron" if is_cron else "live"
     save_cp = None if is_cron else save_checkpoint
     emit("info", "start", f"--- Starting Scraper Engine (Mode: {mode}, Batch Size: {batch_size}, "
@@ -99,8 +107,24 @@ def run_scraper(
             break
 
         if is_cron:
-            bottles = live_fetch_bottles(limit=remaining, published_since=published_since)
-            emit("info", "info", f"Fetched {len(bottles)} bottles published since {published_since.isoformat()}.")
+            bottles = live_fetch_bottles(
+                limit=remaining,
+                published_since=published_since,
+                created_since=created_since,
+                created_until=created_until,
+            )
+            if created_since or created_until:
+                emit(
+                    "info",
+                    "info",
+                    "Fetched "
+                    f"{len(bottles)} bottles created between "
+                    f"{created_since.isoformat() if created_since else '-inf'} and "
+                    f"{created_until.isoformat() if created_until else '+inf'}.",
+                )
+            else:
+                emit("info", "info",
+                     f"Fetched {len(bottles)} bottles published since {published_since.isoformat()}.")
         else:
             bottles = live_fetch_bottles(after_id=last_processed_id, limit=remaining)
             emit("info", "info", f"Fetched {len(bottles)} bottles (server-side filtered).")

@@ -1,6 +1,7 @@
-import requests
 import os
 from datetime import datetime
+
+import requests
 
 STRAPI_BASE_URL = os.environ.get("STRAPI_BASE_URL", "http://localhost:1337/api")
 STRAPI_API_KEY = os.environ.get("STRAPI_API_KEY", "")
@@ -15,6 +16,8 @@ def fetch_bottles(
     after_id: int | None = None,
     limit: int | None = None,
     published_since: datetime | None = None,
+    created_since: datetime | None = None,
+    created_until: datetime | None = None,
 ) -> list[dict]:
     """Fetches SKUs from Strapi that have a non-null wbId.
 
@@ -22,22 +25,37 @@ def fetch_bottles(
         after_id: If set, only fetch SKUs with id > after_id (checkpoint resume).
         limit: If set, stop fetching once this many items are collected.
         published_since: If set, only fetch SKUs published at or after this datetime.
+        created_since: If set, only fetch SKUs created at or after this datetime.
+        created_until: If set, only fetch SKUs created before this datetime.
     """
     all_items: list[dict] = []
     page_size = 100
     start = 0
 
+    def _format_dt(value: datetime) -> str:
+        return value.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
     while True:
         after_filter = f"&filters[id][$gt]={after_id}" if after_id else ""
-        date_filter = (
+        published_filter = (
             f"&filters[publishedAt][$gte]={published_since.strftime('%Y-%m-%dT%H:%M:%S.000Z')}"
             if published_since else ""
+        )
+        created_from_filter = (
+            f"&filters[createdAt][$gte]={_format_dt(created_since)}"
+            if created_since else ""
+        )
+        created_until_filter = (
+            f"&filters[createdAt][$lt]={_format_dt(created_until)}"
+            if created_until else ""
         )
         url = (
             f"{STRAPI_BASE_URL}/skus"
             f"?filters[wbId][$notNull]=true"
             f"{after_filter}"
-            f"{date_filter}"
+            f"{published_filter}"
+            f"{created_from_filter}"
+            f"{created_until_filter}"
             f"&pagination[limit]={page_size}"
             f"&pagination[start]={start}"
             f"&sort=id:asc"

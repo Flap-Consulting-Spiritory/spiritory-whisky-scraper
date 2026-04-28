@@ -16,7 +16,7 @@ For each bottle:
 | Script | Purpose |
 |--------|---------|
 | `scraper_engine.py` | **Full backfill** — processes all Strapi bottles missing data (run once) |
-| `cron_daily.py` | **Daily daemon** — processes only bottles published in the last 24h (runs continuously) |
+| `cron_daily.py` | **Daily daemon** — processes only bottles created during the previous UTC day (runs continuously) |
 
 ---
 
@@ -206,7 +206,9 @@ python scraper_engine.py --reset-checkpoint --batch 100
 
 ### Daily Cron Daemon
 
-Runs indefinitely. Wakes once per day at the configured UTC time, fetches bottles published in the **last 24 hours**, and runs the full pipeline.
+Runs indefinitely. Wakes once per day at the configured UTC time, fetches bottles created during the **previous UTC calendar day**, and runs the full pipeline.
+
+The daemon filters by Strapi `createdAt`, not `publishedAt`. `publishedAt` can change when a SKU is updated, which would make already-processed bottles appear again in a daily job.
 
 ```bash
 # Default: midnight UTC
@@ -217,6 +219,9 @@ python cron_daily.py --hour 6 --minute 30
 
 # Fire immediately, then enter normal schedule (useful for testing)
 python cron_daily.py --run-now
+
+# Fire for a specific UTC date, then enter normal schedule
+python cron_daily.py --run-now --target-date 2026-04-27
 
 # Group 5 bottles per Venice call inside each daily cycle
 python cron_daily.py --venice-batch 5

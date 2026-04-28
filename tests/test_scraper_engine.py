@@ -87,6 +87,30 @@ def test_cron_mode_does_not_write_checkpoint(patched, monkeypatch):
     assert patched["update"].call_count == 2
 
 
+def test_cron_created_window_is_forwarded_to_strapi(patched, monkeypatch):
+    captured = {}
+
+    def _fetch(**kwargs):
+        captured.update(kwargs)
+        return [_bottle(201)]
+
+    monkeypatch.setattr(scraper_engine, "live_fetch_bottles", _fetch)
+    created_since = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    created_until = datetime(2026, 1, 3, tzinfo=timezone.utc)
+
+    scraper_engine.run_scraper(
+        batch_size=10,
+        created_since=created_since,
+        created_until=created_until,
+    )
+
+    assert captured["created_since"] is created_since
+    assert captured["created_until"] is created_until
+    assert captured["published_since"] is None
+    assert not patched["state_file"].exists(), \
+        "createdAt cron mode must not create/update scraper_state.json"
+
+
 def test_backfill_mode_writes_checkpoint(patched, monkeypatch):
     monkeypatch.setattr(scraper_engine, "live_fetch_bottles", lambda **kw: [_bottle(55)])
     scraper_engine.run_scraper(batch_size=1)

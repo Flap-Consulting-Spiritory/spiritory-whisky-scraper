@@ -1,9 +1,9 @@
 """cron_daily.py — Daily cron daemon for Spiritory Whisky Scraper.
 
 Runs as a long-lived background process. At the configured UTC time each day
-(default: 00:00), fetches all bottles published in the last 24 hours, runs the
-full pipeline (WhiskyBase scrape → Venice description → Strapi write), and
-appends a row per bottle to `logs/scraper.csv` (mode=cron).
+(default: 00:00), fetches all bottles created during the previous UTC calendar
+day, runs the full pipeline (WhiskyBase scrape → Venice description → Strapi
+write), and appends a row per bottle to `logs/scraper.csv` (mode=cron).
 
 Shutdown is graceful: SIGTERM flips a `threading.Event` that both the
 scheduler and the scraper loop check, so a running batch stops after the
@@ -28,7 +28,7 @@ import signal
 import threading
 import time
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 warnings.filterwarnings("ignore", message=".*google.generativeai.*")
 
@@ -75,17 +75,36 @@ def sleep_until(target: datetime) -> None:
             return
 
 
-def run_cron_cycle(batch_size: int, venice_batch: int = 1) -> None:
-    """Execute one daily pipeline run: fetch last-24h bottles and process them."""
+def target_day_for_run(now: datetime | None = None) -> date:
+    """Return the closed UTC day this run should process."""
+    now_utc = now.astimezone(timezone.utc) if now else datetime.now(timezone.utc)
+    return now_utc.date() - timedelta(days=1)
+
+
+def day_window_utc(target_day: date) -> tuple[datetime, datetime]:
+    """Return [start, end) UTC datetimes for a calendar day."""
+    start = datetime(target_day.year, target_day.month, target_day.day, tzinfo=timezone.utc)
+    return start, start + timedelta(days=1)
+
+
+def run_cron_cycle(
+    batch_size: int,
+    venice_batch: int = 1,
+    target_day: date | None = None,
+) -> None:
+    """Execute one daily pipeline run for a closed UTC createdAt day."""
     now_utc = datetime.now(timezone.utc)
-    published_since = now_utc - timedelta(hours=24)
+    target_day = target_day or target_day_for_run(now_utc)
+    created_since, created_until = day_window_utc(target_day)
 
     print(
         f"\n[Cron] === Daily run triggered at {now_utc.isoformat(timespec='seconds')} UTC ===",
         flush=True,
     )
     print(
-        f"[Cron] Fetching bottles published since: {published_since.isoformat(timespec='seconds')} UTC "
+        f"[Cron] Fetching bottles created on {target_day.isoformat()} UTC "
+        f"[{created_since.isoformat(timespec='seconds')}, "
+        f"{created_until.isoformat(timespec='seconds')}) "
         f"(venice_batch={venice_batch})",
         flush=True,
     )
@@ -93,7 +112,8 @@ def run_cron_cycle(batch_size: int, venice_batch: int = 1) -> None:
     try:
         run_scraper(
             batch_size=batch_size,
-            published_since=published_since,
+            created_since=created_since,
+            created_until=created_until,
             stop_event=_STOP,
             venice_batch=venice_batch,
         )
@@ -113,7 +133,19 @@ def main() -> None:
                         help="Bottles per Venice call (default: 1 = per-bottle)")
     parser.add_argument("--run-now", action="store_true",
                         help="Fire the pipeline immediately before entering the normal schedule")
+    parser.add_argument("--target-date", type=str, default=None,
+                        help="UTC date YYYY-MM-DD to process with --run-now (default: yesterday UTC)")
     args = parser.parse_args()
+
+    if args.target_date and not args.run_now:
+        parser.error("--target-date is only valid together with --run-now")
+
+    target_date = None
+    if args.target_date:
+        try:
+            target_date = date.fromisoformat(args.target_date)
+        except ValueError:
+            parser.error("--target-date must use YYYY-MM-DD")
 
     print(
         f"[Cron] Daemon started. Trigger: {args.hour:02d}:{args.minute:02d} UTC daily. "
@@ -124,7 +156,7 @@ def main() -> None:
 
     if args.run_now:
         print("[Cron] --run-now: firing immediately.", flush=True)
-        run_cron_cycle(batch_size=args.batch, venice_batch=args.venice_batch)
+        run_cron_cycle(batch_size=args.batch, venice_batch=args.venice_batch, target_day=target_date)
 
     while not _STOP.is_set():
         trigger = next_trigger_dt(args.hour, args.minute)

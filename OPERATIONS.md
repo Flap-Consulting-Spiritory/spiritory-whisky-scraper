@@ -6,7 +6,7 @@
 | Local dir | `/home/john/Desktop/Projects/Spirit/Scraper/` |
 | VPS dir | `/home/flapagency/spiritory/scraper/` (cloned from GitHub) |
 | Runtime | Long-lived Python process (`cron_daily.py`), launched with `nohup`. NO container. |
-| Cron trigger | 00:00 UTC daily — fetches bottles from last 24h, runs WhiskyBase → Venice → Strapi |
+| Cron trigger | 00:00 UTC daily — fetches bottles created during the previous UTC day, runs WhiskyBase → Venice → Strapi |
 | Logs | `~/spiritory/scraper/logs/scraper.csv` (per-bottle), `logs/cron.log` (stdout) |
 
 ## SSH
@@ -31,6 +31,7 @@ ssh spiritory-vps "cd ~/spiritory/scraper && nohup python3 cron_daily.py > logs/
 
 ```bash
 ssh spiritory-vps "cd ~/spiritory/scraper && python3 cron_daily.py --run-now"
+ssh spiritory-vps "cd ~/spiritory/scraper && python3 cron_daily.py --run-now --target-date 2026-04-27"
 ```
 
 ## Logs / debug
