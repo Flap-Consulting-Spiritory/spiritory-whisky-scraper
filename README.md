@@ -237,6 +237,11 @@ kill -TERM <pid>
 
 Every run appends results to `logs/scraper.csv`. Columns:
 
+`logs/runs.csv` is the one-row-per-run summary. Use it first when checking
+whether a scheduled/manual run found bottles for a specific UTC target date.
+`logs/scraper.csv` is cumulative per bottle across all runs, so `tail` may show
+rows from an earlier target date.
+
 | Column | Description |
 |--------|-------------|
 | `id` | Strapi bottle ID |
@@ -249,6 +254,11 @@ Every run appends results to `logs/scraper.csv`. Columns:
 | `timestamp` | ISO 8601 timestamp of processing |
 
 Status tags: `[already had data]`, `[no wb data]`, `[ban]`, `[error]`
+
+Run summary columns in `logs/runs.csv` include `run_id`, `trigger`,
+`target_date`, `window_start`, `window_end`, `batch_limit`, `status`,
+`fetched_count`, `processed_count`, `skipped_complete_count`, `scraped_count`,
+and `error_count`.
 
 ---
 

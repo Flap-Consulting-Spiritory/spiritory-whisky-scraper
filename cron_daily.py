@@ -23,12 +23,14 @@ Environment (optional overrides):
 """
 
 import argparse
+import csv
 import os
 import signal
 import threading
 import time
 import warnings
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 warnings.filterwarnings("ignore", message=".*google.generativeai.*")
 
@@ -87,38 +89,131 @@ def day_window_utc(target_day: date) -> tuple[datetime, datetime]:
     return start, start + timedelta(days=1)
 
 
+def build_run_id(started_at: datetime, target_day: date, trigger: str) -> str:
+    safe_trigger = "".join(ch if ch.isalnum() else "-" for ch in trigger).strip("-")
+    return f"{started_at.strftime('%Y%m%dT%H%M%SZ')}-{target_day.isoformat()}-{safe_trigger}"
+
+
+def append_run_report(row: dict, filepath: str = "logs/runs.csv") -> None:
+    """Append a one-row-per-run summary for presentation/auditing."""
+    columns = [
+        "run_id",
+        "trigger",
+        "started_at",
+        "finished_at",
+        "target_date",
+        "window_start",
+        "window_end",
+        "batch_limit",
+        "venice_batch",
+        "status",
+        "fetched_count",
+        "processed_count",
+        "skipped_complete_count",
+        "skipped_missing_wbid_count",
+        "scraped_count",
+        "ban_count",
+        "error_count",
+        "error_message",
+        "scraper_csv",
+    ]
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    file_exists = path.exists()
+    with path.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=columns, extrasaction="ignore")
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+
 def run_cron_cycle(
     batch_size: int,
     venice_batch: int = 1,
     target_day: date | None = None,
+    trigger: str = "manual_api",
 ) -> None:
     """Execute one daily pipeline run for a closed UTC createdAt day."""
-    now_utc = datetime.now(timezone.utc)
-    target_day = target_day or target_day_for_run(now_utc)
+    started_at = datetime.now(timezone.utc)
+    target_day = target_day or target_day_for_run(started_at)
     created_since, created_until = day_window_utc(target_day)
+    run_id = build_run_id(started_at, target_day, trigger)
 
     print(
-        f"\n[Cron] === Daily run triggered at {now_utc.isoformat(timespec='seconds')} UTC ===",
+        f"\n[Cron] === Run started: run_id={run_id} trigger={trigger} "
+        f"started_at={started_at.isoformat(timespec='seconds')} UTC ===",
         flush=True,
     )
     print(
-        f"[Cron] Fetching bottles created on {target_day.isoformat()} UTC "
-        f"[{created_since.isoformat(timespec='seconds')}, "
-        f"{created_until.isoformat(timespec='seconds')}) "
-        f"(venice_batch={venice_batch})",
+        f"[Cron] Scope: target_date={target_day.isoformat()} UTC, "
+        f"createdAt_window=[{created_since.isoformat(timespec='seconds')}, "
+        f"{created_until.isoformat(timespec='seconds')}), "
+        f"batch_limit={batch_size}, venice_batch={venice_batch}.",
+        flush=True,
+    )
+    print(
+        "[Cron] Reports: logs/runs.csv is one row per run; "
+        "logs/scraper.csv is cumulative per bottle across all runs.",
         flush=True,
     )
 
+    stats = {
+        "run_id": run_id,
+        "status": "error",
+        "fetched_count": 0,
+        "processed_count": 0,
+        "skipped_complete_count": 0,
+        "skipped_missing_wbid_count": 0,
+        "scraped_count": 0,
+        "ban_count": 0,
+        "error_count": 1,
+        "error_message": "",
+        "scraper_csv": "logs/scraper.csv",
+    }
     try:
-        run_scraper(
+        result = run_scraper(
             batch_size=batch_size,
             created_since=created_since,
             created_until=created_until,
             stop_event=_STOP,
             venice_batch=venice_batch,
+            run_context={
+                "run_id": run_id,
+                "trigger": trigger,
+                "target_date": target_day.isoformat(),
+                "window_start": created_since.isoformat(timespec="seconds"),
+                "window_end": created_until.isoformat(timespec="seconds"),
+            },
         )
+        if result:
+            stats.update(result)
     except Exception as e:
+        stats["error_message"] = str(e)
         print(f"[Cron] ERROR during scraper run: {e}", flush=True)
+    finally:
+        finished_at = datetime.now(timezone.utc)
+        report_row = {
+            **stats,
+            "run_id": run_id,
+            "trigger": trigger,
+            "started_at": started_at.isoformat(timespec="seconds"),
+            "finished_at": finished_at.isoformat(timespec="seconds"),
+            "target_date": target_day.isoformat(),
+            "window_start": created_since.isoformat(timespec="seconds"),
+            "window_end": created_until.isoformat(timespec="seconds"),
+            "batch_limit": batch_size,
+            "venice_batch": venice_batch,
+        }
+        append_run_report(report_row)
+        print(
+            f"[Cron] === Run finished: run_id={run_id} status={report_row['status']} "
+            f"target_date={target_day.isoformat()} fetched={report_row['fetched_count']} "
+            f"processed={report_row['processed_count']} "
+            f"already_complete={report_row['skipped_complete_count']} "
+            f"scraped={report_row['scraped_count']} errors={report_row['error_count']} ===",
+            flush=True,
+        )
+        print("[Cron] Run summary saved to: logs/runs.csv", flush=True)
 
 
 def main() -> None:
@@ -156,7 +251,12 @@ def main() -> None:
 
     if args.run_now:
         print("[Cron] --run-now: firing immediately.", flush=True)
-        run_cron_cycle(batch_size=args.batch, venice_batch=args.venice_batch, target_day=target_date)
+        run_cron_cycle(
+            batch_size=args.batch,
+            venice_batch=args.venice_batch,
+            target_day=target_date,
+            trigger="manual_cli",
+        )
 
     while not _STOP.is_set():
         trigger = next_trigger_dt(args.hour, args.minute)
@@ -169,7 +269,7 @@ def main() -> None:
         sleep_until(trigger)
         if _STOP.is_set():
             break
-        run_cron_cycle(batch_size=args.batch, venice_batch=args.venice_batch)
+        run_cron_cycle(batch_size=args.batch, venice_batch=args.venice_batch, trigger="scheduled")
 
     print("[Cron] Daemon exited cleanly.", flush=True)
 

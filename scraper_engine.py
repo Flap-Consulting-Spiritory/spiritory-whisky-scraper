@@ -51,6 +51,7 @@ def run_scraper(
     event_callback=None,
     stop_event=None,
     venice_batch: int = 1,
+    run_context: dict | None = None,
 ):
     """Run the scraper pipeline.
 
@@ -65,6 +66,7 @@ def run_scraper(
         event_callback: Optional callable(event: dict) for structured events.
         stop_event: Optional threading.Event — if set, loop exits gracefully.
         venice_batch: Group N bottles per Venice call (default 1 = per-bottle).
+        run_context: Optional metadata for logs, e.g. run_id/target date.
     """
     def emit(level, event_type, message, bottle_id=None, bottle_name=None):
         print(message, flush=True)
@@ -81,8 +83,15 @@ def run_scraper(
     is_cron = any(v is not None for v in (published_since, created_since, created_until))
     mode = "cron" if is_cron else "live"
     save_cp = None if is_cron else save_checkpoint
-    emit("info", "start", f"--- Starting Scraper Engine (Mode: {mode}, Batch Size: {batch_size}, "
-                          f"Venice Batch: {venice_batch}) ---")
+    run_context = run_context or {}
+    run_id = run_context.get("run_id", "n/a")
+    target_date = run_context.get("target_date", "n/a")
+    emit(
+        "info",
+        "start",
+        f"--- Starting Scraper Engine (Run ID: {run_id}, Target Date: {target_date}, "
+        f"Mode: {mode}, Batch Size: {batch_size}, Venice Batch: {venice_batch}) ---",
+    )
 
     _logger = CSVLogger(mode=mode)
 
@@ -90,11 +99,20 @@ def run_scraper(
     MAX_BAN_RETRIES = 6
     ban_retries = 0
     processed_count = 0
+    fetched_count = 0
+    skipped_complete_count = 0
+    skipped_missing_wbid_count = 0
+    scraped_count = 0
+    ban_count = 0
+    error_count = 0
+    status = "completed"
+    error_message = ""
     venice_queue: list[BottleTask] = []
 
     while True:
         if stopped():
             emit("warning", "stopped", "Run stopped by user.")
+            status = "stopped"
             break
 
         last_processed_id = load_checkpoint() if not is_cron else None
@@ -104,6 +122,7 @@ def run_scraper(
         remaining = batch_size - processed_count
         if remaining <= 0:
             emit("info", "finish", f"[Batch Limit] Reached max batch size of {batch_size}. Stopping.")
+            status = "batch_limit"
             break
 
         if is_cron:
@@ -113,6 +132,7 @@ def run_scraper(
                 created_since=created_since,
                 created_until=created_until,
             )
+            fetched_count += len(bottles)
             if created_since or created_until:
                 emit(
                     "info",
@@ -127,6 +147,7 @@ def run_scraper(
                      f"Fetched {len(bottles)} bottles published since {published_since.isoformat()}.")
         else:
             bottles = live_fetch_bottles(after_id=last_processed_id, limit=remaining)
+            fetched_count += len(bottles)
             emit("info", "info", f"Fetched {len(bottles)} bottles (server-side filtered).")
 
         if not bottles:
@@ -137,6 +158,7 @@ def run_scraper(
         for bottle in bottles:
             if stopped():
                 emit("warning", "stopped", "Run stopped by user.")
+                status = "stopped"
                 break
             if processed_count >= batch_size:
                 emit("info", "finish", f"[Batch Limit] Reached max batch size of {batch_size}. Stopping.")
@@ -148,6 +170,7 @@ def run_scraper(
 
             if not wb_id:
                 emit("info", "skip", f"  -> Bottle {b_id} has no wbId. Skipping.", bottle_id=b_id)
+                skipped_missing_wbid_count += 1
                 continue
 
             emit("info", "processing", f"\nProcessing Bottle ID: {b_id} ({b_name}) [WB ID: {wb_id}]",
@@ -164,6 +187,7 @@ def run_scraper(
                 if save_cp:
                     save_cp(b_id)
                 processed_count += 1
+                skipped_complete_count += 1
                 continue
 
             try:
@@ -174,6 +198,7 @@ def run_scraper(
 
                 emit("info", "scraping", "  -> Scraping WhiskyBase...", bottle_id=b_id, bottle_name=b_name)
                 wb_data = scrape_bottle_data(wb_id)
+                scraped_count += 1
                 reviews_text = wb_data.get("description_en_raw") or ""
                 tasting_tags = wb_data.get("tasting_tags", [])
 
@@ -215,6 +240,7 @@ def run_scraper(
 
             except (ScrapeBanException, ScrapeHardBanException, TenacityRetryError) as e:
                 ban_retries += 1
+                ban_count += 1
                 _logger.log(b_id, wb_id, b_name, "[ban]", "[ban]", "[ban]")
                 # Flush any queued Venice writes before cooldown so work isn't lost
                 flush_venice_queue(venice_queue, emit, _logger.log, save_cp, venice_batch)
@@ -222,6 +248,8 @@ def run_scraper(
 
                 if ban_retries > MAX_BAN_RETRIES:
                     emit("error", "ban", f"\n[FATAL] Banned {MAX_BAN_RETRIES} times. Stopping permanently.")
+                    status = "fatal_ban"
+                    error_message = str(e)
                     break
                 cooldown = BAN_COOLDOWNS[min(ban_retries - 1, len(BAN_COOLDOWNS) - 1)]
                 emit("warning", "ban", f"\n[BAN] WhiskyBase ban detected: {e}",
@@ -235,6 +263,9 @@ def run_scraper(
                 break
 
             except Exception as e:
+                error_count += 1
+                status = "error"
+                error_message = str(e)
                 emit("error", "error",
                      f"\n[FATAL ERROR] Unexpected error on bottle {b_id}: {e}. Halting scraper.",
                      bottle_id=b_id, bottle_name=b_name)
@@ -250,8 +281,32 @@ def run_scraper(
             break
 
     _logger.close()
-    emit("info", "finish", f"\n--- Scraper Engine Finished ({processed_count} bottles processed) ---")
+    emit(
+        "info",
+        "finish",
+        f"\n--- Scraper Engine Finished (Run ID: {run_id}, Status: {status}, "
+        f"Fetched: {fetched_count}, Processed: {processed_count}, "
+        f"Already complete: {skipped_complete_count}, Missing wbId: {skipped_missing_wbid_count}, "
+        f"Scraped: {scraped_count}, Bans: {ban_count}, Errors: {error_count}) ---",
+    )
     emit("info", "finish", f"CSV log saved to: {_logger.filepath}")
+    return {
+        "run_id": run_id,
+        "target_date": target_date,
+        "mode": mode,
+        "status": status,
+        "batch_size": batch_size,
+        "venice_batch": venice_batch,
+        "fetched_count": fetched_count,
+        "processed_count": processed_count,
+        "skipped_complete_count": skipped_complete_count,
+        "skipped_missing_wbid_count": skipped_missing_wbid_count,
+        "scraped_count": scraped_count,
+        "ban_count": ban_count,
+        "error_count": error_count,
+        "error_message": error_message,
+        "scraper_csv": _logger.filepath,
+    }
 
 
 if __name__ == "__main__":
