@@ -22,6 +22,18 @@ class ScrapeHardBanException(Exception):
     pass
 
 
+# Substrings present ONLY on a Cloudflare interstitial / challenge page.
+# Do NOT add "challenge-platform": Cloudflare embeds
+# "/cdn-cgi/challenge-platform/scripts/jsd/main.js" on every successful page
+# (its bot-detection JS), so it is not a reliable challenge marker and would
+# false-positive every successful scrape.
+CF_CHALLENGE_MARKERS: tuple[str, ...] = (
+    "Just a moment...",
+    "cf-browser-verification",
+    "cf-turnstile",
+)
+
+
 # --- Shared browser session ---
 # Mutable dict avoids global declarations for counter state.
 # Refreshed every _CONTEXT_REFRESH_EVERY requests to rotate fingerprint.
@@ -150,12 +162,7 @@ def scrape_bottle_data(whiskybase_id: str) -> dict:
         page.close()
 
         # Check for Cloudflare Challenge (multiple detection patterns)
-        if any(marker in html for marker in (
-            "Just a moment...",
-            "cf-browser-verification",
-            "cf-turnstile",
-            "challenge-platform",
-        )):
+        if any(marker in html for marker in CF_CHALLENGE_MARKERS):
             raise ScrapeBanException("Cloudflare challenge detected!")
 
         soup = BeautifulSoup(html, 'html.parser')

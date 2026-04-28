@@ -203,6 +203,7 @@ python -c "from cron_daily import run_cron_cycle; print('OK')"
 - **Modular integrations:** Each data source lives in `integrations/`. Interface: `fetch_bottles() -> list[dict]` / `update_bottle(id, payload) -> bool`
 - **No hallucinations:** Only call Venice AI if `description_en_raw` from WhiskyBase is non-empty. Only write tasting notes if WhiskyBase returned tags
 - **Error handling:** `ScrapeBanException` → Tenacity retries with 30–180s exponential backoff (5 attempts). If that exhausts → outer ban loop with progressive cooldowns (10→20→40→60 min), max 6 retries. `ScrapeHardBanException` → propagates immediately. All other per-bottle exceptions → log `[error]` and halt
+- **Cloudflare challenge markers** live in `CF_CHALLENGE_MARKERS` (whiskybase.py). Only add substrings that appear *exclusively* on the CF interstitial. Do **not** include `challenge-platform` — that string is part of `/cdn-cgi/challenge-platform/scripts/jsd/main.js`, which CF embeds on every successful page and would false-positive every scrape. Regression covered in `tests/test_whiskybase.py`
 - **Warnings suppression:** `google.generativeai` deprecation warnings are suppressed at entry points with `warnings.filterwarnings`
 - **Type hints:** Maintain `def fetch_bottles() -> list[dict]:` style across all functions
 - **Jitter:** Always call `random_delay()` before WhiskyBase requests
